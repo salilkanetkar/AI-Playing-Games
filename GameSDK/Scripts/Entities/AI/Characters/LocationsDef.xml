@@ -1,0 +1,8 @@
+<Definition root="Data">
+  <!-- <Property name="version" type="string"/> -->
+
+  <Table name="Locations">
+    <Property name="b" type="string" optional="1"/>
+    <Array name="HostageLoc" type="Vec3" elementName="HLocVal"/>
+  </Table>
+</Definition>

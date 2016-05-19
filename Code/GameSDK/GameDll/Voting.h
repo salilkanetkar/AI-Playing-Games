@@ -1,0 +1,98 @@
+/*
+* All or portions of this file Copyright (c) Amazon.com, Inc. or its affiliates or
+* its licensors.
+*
+* For complete copyright and license terms please see the LICENSE at the root of this
+* distribution (the "License"). All use of this software is governed by the License,
+* or, if provided, by the license below or the license accompanying this file. Do not
+* remove or modify any license notices. This file is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*
+*/
+// Original file Copyright Crytek GMBH or its affiliates, used under license.
+
+#ifndef __VOTING_H__
+#define __VOTING_H__
+
+#pragma once
+
+#include "GameRulesTypes.h"
+
+// Summary
+//  Types for the different vote states
+enum EVotingState
+{
+  eVS_none=0,//no voting is currently held
+  eVS_kick,//kick vote
+  eVS_nextMap,//next map vote
+  eVS_changeMap,//change map vote
+  eVS_consoleCmd,//execute arbitrary console cmd
+  eVS_last//this should be always last!
+};
+
+enum EKickState
+{
+	eKS_None = 0,
+	eKS_StartVote,
+	eKS_VoteProgress,
+	eKS_VoteEnd_Success,
+	eKS_VoteEnd_Failure,
+	eKS_Num
+};
+
+struct SVotingParams
+{
+  SVotingParams();
+
+};
+
+class CVotingSystem
+{
+  struct SVoting//once it is initiated
+  {
+    EntityId    initiator;
+    CTimeValue  startTime;
+  };
+public:
+  CVotingSystem();
+  ~CVotingSystem();
+  bool  StartVoting(EntityId id, const CTimeValue& start, EVotingState st, EntityId eid, const char* subj);
+  void  EndVoting();
+  bool  GetCooldownTime(EntityId id, CTimeValue& v);
+  
+  bool  IsInProgress()const;
+  int   GetNumVotesFor()const;
+  int   GetNumVotesAgainst()const;
+
+	void	GetPlayerVoteBreakdown(EntityId kickTargetId, TVoteDataList& voteDataList) const;
+
+  const string& GetSubject()const;
+  EntityId GetEntityId()const;
+  EVotingState GetType()const;
+  
+	CTimeValue GetVotingTime()const;
+	CTimeValue GetVotingStartTime()const;
+
+  void  Reset();
+	bool  EntityLeftGame(EntityId entityId);
+
+  //clients can vote
+  void  Vote(EntityId id, int team, bool yes);
+  bool  CanVote(EntityId id)const;
+private:
+	typedef std::vector<EntityId> TVoteEntitiesVec;
+
+  CTimeValue            m_startTime;
+  
+  EVotingState          m_state;
+  string                m_subject;
+  EntityId              m_id;
+
+  TVoteEntitiesVec      m_votesFor;
+  TVoteEntitiesVec      m_votesAgainst;
+
+  //recent voting
+  std::vector<SVoting>  m_votings;
+};
+
+#endif // #ifndef __VOTING_H__

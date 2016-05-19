@@ -1,0 +1,196 @@
+/*
+* All or portions of this file Copyright (c) Amazon.com, Inc. or its affiliates or
+* its licensors.
+*
+* For complete copyright and license terms please see the LICENSE at the root of this
+* distribution (the "License"). All use of this software is governed by the License,
+* or, if provided, by the license below or the license accompanying this file. Do not
+* remove or modify any license notices. This file is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*
+*/
+// Original file Copyright Crytek GMBH or its affiliates, used under license.
+
+#include "StdAfx.h"
+
+#include "EntityEffectsCloak.h"
+
+#include "IEntitySystem.h"
+#include "IComponent.h"
+#include "GameRules.h"
+#include "Actor.h"
+
+#if !defined(_RELEASE)
+	#define ENTITYEFFECTSCLOAK_LOG(...)    GameWarning("[EntityEffects::Cloak] " __VA_ARGS__)
+#else
+	#define ENTITYEFFECTSCLOAK_LOG(...)    (void)(0)
+#endif
+
+//////////////////////////////////////////////////////////////////////////
+void EntityEffects::Cloak::CloakEntity( IEntity* pEntity, bool bEnable, bool bFade, float blendSpeedScale, bool bCloakFadeByDistance, uint8 cloakPaletteColorChannel, bool bIgnoreCloakRefractionColor)
+{
+	if (pEntity)
+	{
+		IComponentRender *pRenderProxy = (IComponentRender*) pEntity->GetComponent<IComponentRender>().get();
+		if (pRenderProxy)
+		{
+			// If the render-node for this entity currently isn't rendering, then force the cloaking transition
+			// not to fade in/out. Currently the engine only updates the blending when a render node is visible, so
+			// if they cloak around a corner and the come into view you will suddenly see the transition which should of
+			// happened a few seconds ago - this also reveals their position. Ideally a proper update fix should go into
+			// the engine, but this would involve multiple code changes, at this point in time this is a much safer fix
+			if(bFade && gEnv->bMultiplayer)
+			{
+				IRenderNode* pRenderNode = pRenderProxy->GetRenderNode();
+				if(pRenderNode != NULL && gEnv->pRenderer != NULL)
+				{
+					// If the renderer frame ID is 2 ahead of the renderNode frame ID then we can assume its not currently
+					// visible. This same test is made in many places in the engine and is a safe test. Unfortunately there
+					// are no functions in the renderproxy, rendernode or entity which will actually give me the visibility status
+					if((gEnv->pRenderer->GetFrameID() - pRenderNode->GetDrawFrame()) > 2 )
+					{
+						bFade = false;
+					}
+				}
+			}
+
+			uint8 currentMask = pRenderProxy->GetMaterialLayersMask();
+			uint8 newMask = currentMask;
+			uint32 blend = pRenderProxy->GetMaterialLayersBlend();
+
+			if (!bFade)
+			{
+				blend = (blend & ~MTL_LAYER_BLEND_CLOAK) | (bEnable ? MTL_LAYER_BLEND_CLOAK : 0);
+			}
+			else
+			{
+				blend = (blend & ~MTL_LAYER_BLEND_CLOAK) | (bEnable ? 0 : MTL_LAYER_BLEND_CLOAK);
+			}
+
+			if (bEnable)
+			{
+				newMask = currentMask|MTL_LAYER_CLOAK;
+			}
+			else
+			{
+				newMask = currentMask&~MTL_LAYER_CLOAK;
+			}
+
+			if (((currentMask ^ newMask) & MTL_LAYER_CLOAK) != 0)
+			{
+				// Set cloak
+				pRenderProxy->SetCloakBlendTimeScale(blendSpeedScale);
+				pRenderProxy->SetMaterialLayersMask(newMask);
+				pRenderProxy->SetMaterialLayersBlend(blend);
+				pRenderProxy->SetCloakColorChannel(cloakPaletteColorChannel);
+				pRenderProxy->SetCloakFadeByDistance(bCloakFadeByDistance);
+				pRenderProxy->SetIgnoreCloakRefractionColor(bIgnoreCloakRefractionColor);
+			}
+		}
+	}
+}
+
+void EntityEffects::Cloak::CloakEntity( EntityId entityId, bool bEnable, bool bFade, float blendSpeedScale, bool bCloakFadeByDistance, uint8 cloakPaletteColorChannel, bool bIgnoreCloakRefractionColor)
+{
+	IEntity* pEntity = gEnv->pEntitySystem->GetEntity( entityId );
+
+	CloakEntity(pEntity, bEnable, bFade, blendSpeedScale, bCloakFadeByDistance, cloakPaletteColorChannel, bIgnoreCloakRefractionColor);
+}
+
+//////////////////////////////////////////////////////////////////////////
+bool EntityEffects::Cloak::CloakSyncEntities( const CloakSyncParams& params )
+{
+	// Check validity of helper systems
+	CRY_ASSERT(gEnv->pEntitySystem);
+
+	// check if the owner is cloaked
+	IEntity* pCloakMaster = gEnv->pEntitySystem->GetEntity(params.cloakMasterId);
+	IEntity* pCloakSlave = gEnv->pEntitySystem->GetEntity(params.cloakSlaveId);
+
+	if(!pCloakMaster || !pCloakSlave)
+	{
+		ENTITYEFFECTSCLOAK_LOG("CloakSync() - cloak Master/Slave ID invalid, aborting cloak sync");
+		return false;
+	}
+
+	IComponentRender* pCloakMasterRP = static_cast<IComponentRender*>(pCloakMaster->GetComponent<IComponentRender>().get());
+	IComponentRender* pCloakSlaveRP	 = static_cast<IComponentRender*>(pCloakSlave->GetComponent<IComponentRender>().get());
+	if (!pCloakMasterRP || !pCloakSlaveRP)
+	{
+		ENTITYEFFECTSCLOAK_LOG("CloakSync() - cloak Master/Slave Render proxy ID invalid, aborting cloak sync");
+		return false;
+	}
+
+	uint8 masterMask = pCloakMasterRP->GetMaterialLayersMask();
+	bool shouldCloakSlave = (masterMask & MTL_LAYER_CLOAK) != 0;
+	if(params.forceDecloakOfSlave) // Allow an override. 
+	{
+		shouldCloakSlave = false; 
+	}
+	uint8 slaveMask = pCloakSlaveRP->GetMaterialLayersMask();
+	bool slaveCloaked = (slaveMask & MTL_LAYER_CLOAK) != 0;
+
+	// May be able to early out, if the object we are holding is already in the correct cloak state
+	if(slaveCloaked == shouldCloakSlave)
+	{
+		return slaveCloaked; // Done
+	}
+	else
+	{
+		const float cloakBlendSpeedScale = pCloakMasterRP->GetCloakBlendTimeScale();
+		const bool bFadeByDistance = pCloakMasterRP->DoesCloakFadeByDistance();
+		const uint8 colorChannel = pCloakMasterRP->GetCloakColorChannel();
+		const bool bIgnoreCloakRefractionColor = pCloakMasterRP->DoesIgnoreCloakRefractionColor();
+		
+		EntityEffects::Cloak::CloakEntity(params.cloakSlaveId, shouldCloakSlave, params.fadeToDesiredCloakTarget, cloakBlendSpeedScale, bFadeByDistance, colorChannel, bIgnoreCloakRefractionColor);
+		
+		return shouldCloakSlave; 
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+bool EntityEffects::Cloak::DoesCloakFadeByDistance(EntityId ownerEntityId)
+{
+	bool bCloakFadeByDist = false;
+	if(gEnv->bMultiplayer)
+	{
+		CActor* pLocalPlayer = static_cast<CActor*>(gEnv->pGame->GetIGameFramework()->GetClientActor());
+		if(pLocalPlayer)
+		{
+			bool isEnemy = (pLocalPlayer->IsFriendlyEntity(ownerEntityId) == 0);
+			bool isLocalPlayer = (ownerEntityId == pLocalPlayer->GetEntityId());
+			bCloakFadeByDist = (isEnemy || isLocalPlayer);
+		}
+	}
+	return bCloakFadeByDist;
+}
+
+//////////////////////////////////////////////////////////////////////////
+uint8 EntityEffects::Cloak::GetCloakColorChannel(EntityId ownerEntityId)
+{
+	uint8 cloakColorChannel = 0;
+	CGameRules* pGameRules = g_pGame->GetGameRules();
+	if(pGameRules)
+	{
+		const CGameRules::eThreatRating threatRating = pGameRules->GetThreatRating(g_pGame->GetClientActorId(), ownerEntityId);
+		return GetCloakColorChannel(threatRating==CGameRules::eFriendly);
+	}
+	return cloakColorChannel;
+}
+
+//////////////////////////////////////////////////////////////////////////
+bool EntityEffects::Cloak::IgnoreRefractionColor(EntityId ownerEntityId)
+{
+	bool bIgnoreCloakRefractionColor = false; // Leave default setting for sp
+	if(gEnv->bMultiplayer)
+	{
+		EntityId pLocalPlayerId = gEnv->pGame->GetIGameFramework()->GetClientActorId();
+		bool isLocalPlayer = (ownerEntityId == pLocalPlayerId);
+		// Local player has no refraction color in mp
+		if(isLocalPlayer)
+		{
+			bIgnoreCloakRefractionColor = true;
+		}
+	}
+	return bIgnoreCloakRefractionColor;
+}

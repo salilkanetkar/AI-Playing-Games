@@ -1,0 +1,193 @@
+<BehaviorTree>
+	<Variables>
+		<Variable name="HasTarget"/>
+		<Variable name="MedicCalle"/>
+		<Variable name="HostageFound" default="false"/>
+		<!-- these variables are not used in this BT, but need to be present to prevent a warning caused by BasicAI:OnReset() -->
+		<Variable name="ExecuteSequence" />
+		<Variable name="ExecuteInterruptibleSequence" />
+	</Variables>
+	<SignalVariables>
+		<Signal name="OnFriendSeen" variable="HasTarget" value="false"/>
+		<Signal name="OnFindingHostage" variable="HasTarget" value="true"/>
+		<Signal name="OnFindingMedic" variable="HasTarget" value="true"/>
+		<Signal name="GoToGameOver" variable="HasTarget" value="false"/>
+		<Signal name="AllHostagesRescued" variable="HasTarget" value="true"/>
+		<Signal name="OnNoTarget" variable="HasTarget" value="false"/>
+		<Signal name="OnLostSightOfTarget" variable="HasTarget" value="false" />
+		<Signal name="OnEnemySeen" variable="HasTarget" value="true" />
+		<Signal name="OnHostileSeen" variable="HasTarget" value="true" />
+	</SignalVariables>
+	<Timestamps>
+	</Timestamps>
+	<Root>
+		<StateMachine>
+
+			<!--
+			=================================================
+					Idle
+			=================================================
+			-->
+			<State name="Idle">
+				<Transitions>
+					<Transition to="GoToMedic" onEvent="OnFindingMedic"/>
+					<Transition to="GoToHostage" onEvent="OnFindingHostage"/>
+					<Transition to="GameWon" onEvent="AllHostagesRescued"/>
+					<Transition to="Combat" onEvent="OnHostileSeen"/>
+				</Transitions>
+				<BehaviorTree>
+					<Sequence>
+						<Signal name="GetMedicLocation" />
+						
+						<SetAlertness value="0"/>
+						<ExecuteLua code="entity.actor:HolsterItem(true)"/>
+						<Stance name="Relaxed"/>
+						<!-- <ExecuteLua code="Log(tostring(System.GetEntityIdByName('DummyPlayer1')))" /> -->
+						<Animate name="ZZ_AI_idleBreak"/>
+						<!-- <SendTransitionSignal name="OnFindingHostage"/> -->
+						<!-- <Loop>
+							<Sequence>
+								<Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="10" />
+							</Sequence>
+						</Loop> -->
+						<!-- <Bubble message="In idle state buddy" duration="5.0" baloon="true" log="true" /> -->
+						<ExecuteLua code="AI.QueueBubbleMessage(System.GetEntityIdByName('CounterTerrorist1'),'Going to rescue hostage')"/>
+						<!-- <ExecuteLua code="entity:reduceHostageNumber()"/> -->
+						<Signal name="OnFindHostage" />
+						<Halt/>
+						<!-- <Move to="Target" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="2.5"/> -->
+					</Sequence>
+				</BehaviorTree>
+			</State>
+
+			<!--
+			=================================================
+					GoToHostage
+			=================================================
+			-->
+			<State name="GoToHostage">
+				<Transitions>
+					<Transition to="GoToMedic" onEvent="OnFindingMedic"/>
+					<Transition to="Idle" onEvent="GoTo_Idle"/>
+					<Transition to="Combat" onEvent="OnHostileSeen"/>
+					<Transition to="GameOver" onEvent="GoToGameOver"/>
+				</Transitions>
+				<BehaviorTree>
+					<Loop>
+						<Sequence>
+							<!-- <Signal name="GetMedicLocation" /> -->
+							<!-- <ExecuteLua code="entity:reduceHostageNumber()"/> -->
+							<!-- <ExecuteLua code="entity:GetHostageLocation()" /> -->
+							<!-- <Bubble message="In finding state" duration="5.0" balloon="true" log="true" /> -->
+							<!-- <ExecuteLua code="AI.SetRefPointPos(System.GetEntityIDByName('DummyPlayer1'), System.GetEntityByName('DummyPlayer1'):GetWorldPos())" /> -->
+							<Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="5" />
+							<SendTransitionSignal name="GoTo_Idle"/>
+							<ExecuteLua code="AI.QueueBubbleMessage(System.GetEntityIdByName('CounterTerrorist1'),'Going to retrieve hostage')"/>
+						</Sequence>
+					</Loop>
+				</BehaviorTree>
+			</State>
+
+			<!--
+			=================================================
+					Combat
+			=================================================
+			-->
+			<State name="Combat">
+				<Transitions>
+					<!-- <Transition to="Idle" onEvent="GoTo_Idle"/> -->
+					<Transition to="GoToHostage" onEvent="GoTo_GoToHostage"/>
+					<Transition to="GameOver" onEvent="GoToGameOver"/>
+				</Transitions>
+				<BehaviorTree>
+					<Sequence>
+            <!-- <Parallel>
+              <Loop> -->
+                <ExecuteLua code="AI.QueueBubbleMessage(System.GetEntityIdByName('CounterTerrorist1'),'Omg!!! Enemy spotted')"/>
+              <!-- </Loop> -->
+              <!-- <Sequence> -->
+    						<Log message="Now I should fight you!"/>
+    						<SetAlertness value="2"/>
+    						<Stance name="Alerted"/>
+    						<ExecuteLua code="entity:SelectPrimaryWeapon()"/>
+    						<Communicate name="TargetSpottedWhileSearching" channel="Reaction" expirity="1.0" waitUntilFinished="0" />
+    						<!-- main combat loop -->
+    						<Loop _startLog="main combat loop">
+    							<!-- <Parallel successMode="any" failureMode="any"> -->
+    								<Sequence>
+    									<Signal name="CheckAIHealth" />
+    									<SuppressFailure>
+    										<Move to="Target" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="10"/>
+    									</SuppressFailure>
+    									<Shoot at="Target" fireMode="Burst" stance="Stand" duration="2.0" _startLog="starting to shoot"/>
+    									<!-- keep fighting or transition back to "Idle" -->
+    									<Selector>
+    										<AssertCondition condition="HasTarget"/>
+    										<SendTransitionSignal name="GoTo_GoToHostage"/>
+    									</Selector>
+    								</Sequence>
+    							<!-- </Parallel> -->
+    						</Loop>
+              <!-- </Sequence>
+            </Parallel> -->
+					</Sequence>
+				</BehaviorTree>
+			</State>
+
+			<!--
+			=================================================
+					GoToMedic
+			=================================================
+			-->
+			<State name="GoToMedic">
+				<Transitions>
+					<Transition to="Idle" onEvent="GoTo_Idle"/>
+				</Transitions>
+				<BehaviorTree>
+					<Sequence>
+						<Bubble message="I am low on health! Need to find a medic" duration="5.0" balloon="true" log="true" />
+						<Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="2.5" />
+						<SendTransitionSignal name="GoTo_Idle"/>
+					</Sequence>
+				</BehaviorTree>
+			</State>
+			
+			<!--
+			=================================================
+					GameWon
+			=================================================
+			-->
+			<State name="GameWon">
+				<BehaviorTree>
+					<Sequence>
+						<Bubble message="Yes! Game Won" duration="5.0" balloon="true" log="true" />
+						<SetAlertness value="0"/>
+						<ExecuteLua code="entity.actor:HolsterItem(true)"/>
+						<Stance name="Relaxed"/>
+						<Animate name="ZZ_AI_idleBreak"/>
+						<Halt/>
+					</Sequence>
+				</BehaviorTree>
+			</State>
+
+			<!--
+			=================================================
+					GameOver
+			=================================================
+			-->
+			<State name="GameOver">
+				<BehaviorTree>
+					<Sequence>
+						<Bubble message="No! Game Lost" duration="5.0" balloon="true" log="true" />
+						<SetAlertness value="0"/>
+						<ExecuteLua code="entity.actor:HolsterItem(false)"/>
+						<Stance name="Relaxed"/>
+						<Animate name="ZZ_AI_idleBreak"/>
+						<Halt/>
+					</Sequence>
+				</BehaviorTree>
+			</State>
+
+		</StateMachine>
+	</Root>
+</BehaviorTree>
