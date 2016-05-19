@@ -1,0 +1,17 @@
+The custom C++ files for the entities are located in
+Code/GameSDK/GameDll/MyAI
+
+The scripts folder contains the scripts for all the entities - the counter
+terrorist, the medic and the terrorist(human).
+The lua scripts are located in
+GameSDK/Scripts/Entities/AI/Characters/
+
+The behavior trees for all the entities are located in
+Scripts/AI/BehaviorTrees/
+The Friend.xml file corresponds to the behavior of the counter terrorist.
+The MedicTree.xml file corresponds to the behavior of the medic
+For the terrorist, we're using SDKGrunt02.xml because the terrorist is almost at
+the top of the food chain and he has to have a simple behavior.
+This behavior tree consists of a simple idle state and a combat state.
+
+The level files are located in GameSDK/levels/
