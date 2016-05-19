@@ -1,0 +1,9 @@
+*
+!Code/
+Code/*
+!Code/GameSDK/
+!GameSDK/
+GameSDK/*
+!GameSDK/levels/
+!GameSDK/Scripts/
+!.gitignore
