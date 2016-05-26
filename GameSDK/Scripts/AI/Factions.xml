@@ -33,7 +33,13 @@
   <Faction name="Friend" default="neutral">
     <Reaction faction="Players" reaction="hostile" />
     <Reaction faction="Grunts" reaction="hostile" />
-	<Reaction faction="Medics" reaction="friendly" />
+		<Reaction faction="Medics" reaction="friendly" />
   </Faction>
+	
+	<Faction name="Hostage" default="neutral">
+		<Reaction faction="Players" reaction="hostile" />
+		<Reaction faction="Friend" reaction="hostile" />
+		<Reaction faction="Medics" reaction="hostile" />
+	</Faction>
   
 </Factions>

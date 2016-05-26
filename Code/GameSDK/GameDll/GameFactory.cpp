@@ -58,6 +58,7 @@
 
 #include "MyAI/CounterTerrorist.h"
 #include "MyAI/Medic.h"
+#include "MyAI/Hostage.h"
 
 #include "MultiplayerEntities/CarryEntity.h"
 
@@ -242,7 +243,8 @@ void InitGameFactory(IGameFramework *pFramework)
 	// Characters
 	REGISTER_FACTORY(pFramework, "Characters/Human", CPlayer, true);
 	REGISTER_FACTORY(pFramework, "Characters/CounterTerrorist", CCounterTerrorist, true);
-  REGISTER_FACTORY(pFramework, "Characters/Medic", CMedic, true);
+	REGISTER_FACTORY(pFramework, "Characters/Medic", CMedic, true);
+	REGISTER_FACTORY(pFramework, "Characters/Hostage", CHostage, true);
 
 	// Items
 	REGISTER_FACTORY(pFramework, "Item", CItem, false);

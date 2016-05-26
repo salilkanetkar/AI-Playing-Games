@@ -1,7 +1,12 @@
 <Data>
-  <Locations b="AllLocations">
-    <HostageLoc>
-      <HLocVal value="106,30,32"/>
-    </HostageLoc>
-  </Locations>
+ <LocationTable>
+  <HostagesLoc>
+   <HosLocation HIndex="1" HName="Hostage2" HLoc="112.51961,30.623842,32.208447"/>
+   <HosLocation HIndex="2" HName="Hostage3" HLoc="137.6938,69.261208,32.208447"/>
+   <HosLocation HIndex="3" HName="Hostage1" HLoc="89.309608,36.162678,32.208447"/>
+  </HostagesLoc>
+  <MedicLoc>
+   <MedLocation MIndex="1" MName="Medic1" MLoc="114.58353,61.016644,32.158447"/>
+  </MedicLoc>
+ </LocationTable>
 </Data>

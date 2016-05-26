@@ -1,8 +1,16 @@
 <Definition root="Data">
   <!-- <Property name="version" type="string"/> -->
-
-  <Table name="Locations">
-    <Property name="b" type="string" optional="1"/>
-    <Array name="HostageLoc" type="Vec3" elementName="HLocVal"/>
+<!-- Array of tables -->
+  <Table name="LocationTable">
+    <Array name="HostagesLoc" elementName="HosLocation">
+      <Property name="HIndex" type="int"/>
+      <Property name="HName" type="string"/>
+      <Property name="HLoc" type="Vec3"/>
+    </Array>
+    <Array name="MedicLoc" elementName="MedLocation">
+      <Property name="MIndex" type="int"/>
+      <Property name="MName" type="string"/>
+      <Property name="MLoc" type="Vec3"/>
+    </Array>
   </Table>
 </Definition>

@@ -1,0 +1,77 @@
+<BehaviorTree>
+	<Variables>
+		<Variable name="HasTarget"/>
+    <Variable name="Rescued" default="false" />
+		<!-- these variables are not used in this BT, but need to be present to prevent a warning caused by BasicAI:OnReset() -->
+		<Variable name="ExecuteSequence" />
+		<Variable name="ExecuteInterruptibleSequence" />
+	</Variables>
+
+	<SignalVariables>
+		<Signal name="OnMoveToRescuer" variable="Rescued" value="true"/>
+		<Signal name="OnNoTarget" variable="HasTarget" value="false"/>
+		<Signal name="OnLostSightOfTarget" variable="HasTarget" value="false" />
+	</SignalVariables>
+
+	<Timestamps>
+	</Timestamps>
+
+	<Root>
+
+		<StateMachine>
+
+			<!--
+			=================================================
+					Idle
+			=================================================
+			-->
+
+			<State name="Idle">
+
+				<Transitions>
+					<Transition to="Move" onEvent="OnMoveToRescuer"/>
+				</Transitions>
+
+				<BehaviorTree>
+
+					<Sequence>
+
+						<SetAlertness value="0"/>
+
+						<ExecuteLua code="entity.actor:HolsterItem(true)"/>
+
+						<Stance name="Relaxed"/>
+
+						<Animate name="ZZ_AI_idleBreak"/>
+
+						<Halt/>
+
+					</Sequence>
+
+				</BehaviorTree>
+
+			</State>
+      <!--
+      Move state -> Activated once the hostage is rescued and then the hostage keeps following
+      the rescuer
+      -->
+
+      <State name="Move">
+        <Transitions>
+          <Transition to="Idle" onEvent="GoTo_Idle" />
+        </Transitions>
+        <BehaviorTree>
+          <Loop>
+            <Sequence>
+              <Signal name="GetRescuerPos" />
+              <Move to="RefPoint" speed="Run" stance="Crouch" avoidDangers="0" stopWithinDistance="8" />
+            </Sequence>
+          </Loop>
+        </BehaviorTree>
+      </State>
+
+		</StateMachine>
+
+	</Root>
+
+</BehaviorTree>

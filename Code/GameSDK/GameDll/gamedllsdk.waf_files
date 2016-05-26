@@ -407,8 +407,10 @@
       "MyAI":[
          "MyAI/CounterTerrorist.cpp",
          "MyAI/Medic.cpp",
+         "MyAI/Hostage.cpp",
          "MyAI/CounterTerrorist.h",
-         "MyAI/Medic.h"
+         "MyAI/Medic.h",
+         "MyAI/Hostage.h"
       ]
 		},
 		"CryGameSDKDLL_uber_7.cpp":{
