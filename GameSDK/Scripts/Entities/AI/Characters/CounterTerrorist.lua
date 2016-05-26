@@ -137,7 +137,7 @@ function CT_x:OnEnemySeen()
   --AIBase.OnEnemySeen(self);
   local attentionTarget = AI.GetAttentionTargetEntity(self.id);
   local targetFaction = attentionTarget.Properties.esFaction
-  if (targetFaction == "Friend" or targetFaction == "Medics" or targetFaction == "Hostage") then
+  if (targetFaction == "Friend" or targetFaction == "Medics" or targetFaction == "Hostage" or targetFaction == "Players") then
 	Log(tostring("Should not Kill"))
 	AI.Signal(SIGNALFILTER_SENDER, 1, "OnFriendSeen", self.id)
   else
