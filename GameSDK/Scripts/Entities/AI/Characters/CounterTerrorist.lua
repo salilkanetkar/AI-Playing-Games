@@ -16,6 +16,7 @@ CT_x = {
     iMedCount = 0,
     sCurrentHostage = "",
     vectorCurrentHosLoc = {},
+    sCurrentEnemy = "",
   }
 }
 
@@ -111,6 +112,7 @@ function CT_x:FindNearestHostage()
       end
     end
   end
+
   if next(DistTable) == nil then
     self.Properties.iHostageRescued = self.Properties.iHostageCount
     AI.Signal(0, -1, "GoTo_Idle", self.id)
@@ -129,24 +131,44 @@ function CT_x:ReleaseHostage()
   local currentEnt = System.GetEntityByName(sCurrentHostage)
   local entId = System.GetEntityIdByName(sCurrentHostage)
   currentEnt.Properties.bRescued = true
+  currentEnt.Properties.sRescuerName = self:GetName()
   self.Properties.iHostageRescued = self.Properties.iHostageRescued + 1
+  self.Properties.sCurrentHostage = ""
+  self.Properties.vectorCurrentHosLoc = {}
   AI.Signal(0, -1, "WalkWithMe", entId)
 end
+
+CT_x.OnBulletRain = function(self, entity, sender, data)
+  AI.Signal(0, -1, "OnHostileSeen", self.id)
+end
+--
+-- function CT_x:FindNearestEnemies()
+--
+-- end
 
 function CT_x:OnEnemySeen()
   --AIBase.OnEnemySeen(self);
   local attentionTarget = AI.GetAttentionTargetEntity(self.id);
   local targetFaction = attentionTarget.Properties.esFaction
+  self.Properties.sCurrentEnemy = attentionTarget:GetName()
+  -- Log(self.Properties.sCurrentEnemy)
   if (targetFaction == "Friend" or targetFaction == "Medics" or targetFaction == "Hostage" or targetFaction == "Players") then
 	Log(tostring("Should not Kill"))
 	AI.Signal(SIGNALFILTER_SENDER, 1, "OnFriendSeen", self.id)
   else
-	Log(tostring(attentionTarget.Properties.esFaction))
 	Log(tostring("Should Kill"))
 	AI.Signal(SIGNALFILTER_SENDER, 1, "OnHostileSeen", self.id)
   end
 end
 
+function CT_x:FindIfEnemyDead()
+  local enemy = System.GetEntityByName(self.Properties.sCurrentEnemy)
+  -- Log(self.Properties.sCurrentEnemy)
+  if (enemy:IsDead()) then
+    self.Properties.sCurrentEnemy = ""
+    AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
+  end
+end
 
 function CT_x:GetHostageLocation()
   Log(tostring("Get hostage location called"))

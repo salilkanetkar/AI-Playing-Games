@@ -23,6 +23,7 @@
 		<Signal name="OnHostileSeen" variable="HasTarget" value="true" />
 	</SignalVariables>
 	<Timestamps>
+    <Timestamp name="EnteredCombat" setOnEvent="EnteredCombat"/>
 	</Timestamps>
 	<Root>
 		<StateMachine>
@@ -79,6 +80,8 @@
 					<Transition to="Combat" onEvent="OnHostileSeen"/>
 					<Transition to="GameOver" onEvent="GoToGameOver"/>
           <Transition to="WalkToHostage" onEvent="GoTo_WalkToHostage" />
+          <!-- <Transition to="MoveToCover" onEvent="OnMoveToCover"/> -->
+          <Transition to="Combat" onEvent="OnBulletRain"/>
 				</Transitions>
 				<BehaviorTree>
 					<!-- <Loop> -->
@@ -88,8 +91,14 @@
 							<!-- <ExecuteLua code="entity:GetHostageLocation()" /> -->
 							<!-- <Bubble message="In finding state" duration="5.0" balloon="true" log="true" /> -->
 							<!-- <ExecuteLua code="AI.SetRefPointPos(System.GetEntityIDByName('DummyPlayer1'), System.GetEntityByName('DummyPlayer1'):GetWorldPos())" /> -->
+              <SetAlertness value="1"/>
               <ExecuteLua code="entity:FindNearestHostage()"/>
-              <Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="15" />
+              <!-- <Parallel> -->
+                <!-- <Loop> -->
+                  <!-- <Animate name="AI_SearchLookAround"/> -->
+                <!-- </Loop> -->
+                <Move to="RefPoint" speed="Walk" stance="Stand" avoidDangers="1" stopWithinDistance="15" />
+              <!-- </Parallel> -->
               <SendTransitionSignal name="GoTo_WalkToHostage"/>
 							<!-- <Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="5" />
 							<SendTransitionSignal name="GoTo_Idle"/>
@@ -106,11 +115,13 @@
           <Transition to="Idle" onEvent="GoTo_Idle" />
           <Transition to="Combat" onEvent="OnHostileSeen" />
           <Transition to="GameOver" onEvent="GoToGameOver" />
+          <!-- <Transition to="MoveToCover" onEvent="OnMoveToCover"/> -->
         </Transitions>
 
         <BehaviorTree>
           <Sequence>
-            <Move to="RefPoint" speed="Walk" stance="Stand" avoidDangers="0" stopWithinDistance="2" />
+            <Move to="RefPoint" speed="Walk" stance="Alerted" avoidDangers="1" stopWithinDistance="2" />
+            <Animate name="AI_SearchLookAround"/>
             <Signal name="ReleaseHostage" />
             <SendTransitionSignal name="GoTo_Idle" />
           </Sequence>
@@ -131,28 +142,100 @@
 					<Sequence>
             <!-- <Parallel>
               <Loop> -->
-                <ExecuteLua code="AI.QueueBubbleMessage(System.GetEntityIdByName('CounterTerrorist1'),'Omg!!! Enemy spotted')"/>
+                <!-- <ExecuteLua code="AI.QueueBubbleMessage(System.GetEntityIdByName('CounterTerrorist1'),'Omg!!! Enemy spotted')"/> -->
               <!-- </Loop> -->
               <!-- <Sequence> -->
     						<Log message="Now I should fight you!"/>
     						<SetAlertness value="2"/>
     						<Stance name="Alerted"/>
     						<ExecuteLua code="entity:SelectPrimaryWeapon()"/>
+                <Signal name="EnteredCombat"/>
     						<Communicate name="TargetSpottedWhileSearching" channel="Reaction" expirity="1.0" waitUntilFinished="0" />
     						<!-- main combat loop -->
     						<Loop _startLog="main combat loop">
     							<!-- <Parallel successMode="any" failureMode="any"> -->
     								<Sequence>
     									<Signal name="CheckAIHealth" />
-    									<SuppressFailure>
+                      <Parallel>
+                        <Selector>
+      <!--
+  											=================================================
+  													cover combat
+  											=================================================
+      											-->
+                          <Sequence>
+                              <Selector>
+                                  <AssertLua code="return (AI.IsInCover(entity.id) and not AI.IsCoverCompromised(entity.id)) "/>
+                                  <Sequence>
+                                      <Log message="trying to find cover"/>
+                                      <QueryTPS name="SDKGrunt_CoverToShootFrom" register="Cover"/>
+                                      <Log message="moving to found cover"/>
+                                      <!-- move to cover; while doing so, start shooting after a small random time of 1-2seconds -->
+                                      <Parallel successMode="any">
+                                          <Move to="Cover" speed="Run" stance="Alerted" fireMode="Off" avoidDangers="1"/>
+                                          <Sequence>
+                                              <!-- wait between 1 and 2 seconds before shooting -->
+                                              <SuppressFailure>
+                                                  <IfTime since="EnteredCombat" isLessThan="2.0">
+                                                      <Sequence>
+                                                          <WaitUntilTime since="EnteredCombat" isMoreThan="1.0"/>
+                                                          <Wait duration="0.0" variation="1.0"/>
+                                                      </Sequence>
+                                                  </IfTime>
+                                              </SuppressFailure>
+                                              <Shoot at="Target" fireMode="Burst" stance="Alerted" duration="999"/>
+                                          </Sequence>
+                                      </Parallel>
+                                  </Sequence>
+                              </Selector>
+                              <Log message="+++ shooting from cover BEGIN +++"/>
+                              <ShootFromCover duration="2.0" fireMode="Burst" aimObstructedTimeout="1.0"/>
+                              <Log message="--- shooting from cover END ---"/>
+                              <AdjustCoverStance duration="3.0" />
+                          </Sequence>
+                          <!--
+                      											=================================================
+                      													open combat
+                      											=================================================
+                      											-->
+                          <Sequence>
+                              <Log message="open combat"/>
+                              <SuppressFailure>
+                                  <Sequence>
+                                      <QueryTPS name="SDKGrunt_OpenCombat" register="RefPoint"/>
+                                      <!-- move to the queried combat position; while doing so, start shooting after a small random time of 1-2seconds -->
+                                      <Parallel successMode="any">
+                                          <Move to="RefPoint" speed="Run" stance="Alerted" fireMode="Off"/>
+                                          <Sequence>
+                                              <!-- wait between 1 and 2 seconds before shooting -->
+                                              <SuppressFailure>
+                                                  <IfTime since="EnteredCombat" isLessThan="2.0">
+                                                      <Sequence>
+                                                          <WaitUntilTime since="EnteredCombat" isMoreThan="1.0"/>
+                                                          <Wait duration="0.0" variation="1.0"/>
+                                                      </Sequence>
+                                                  </IfTime>
+                                              </SuppressFailure>
+                                              <Shoot at="Target" fireMode="Burst" stance="Alerted" duration="999"/>
+                                          </Sequence>
+                                      </Parallel>
+                                  </Sequence>
+                              </SuppressFailure>
+                              <Shoot at="Target" fireMode="Burst" stance="Stand" duration="2.0" _startLog="starting to shoot"/>
+                          </Sequence>
+                      </Selector>
+                      <!-- <Loop> -->
+                      <ExecuteLua code="entity:FindIfEnemyDead()"/>
+                      <!-- </Loop> -->
+                    </Parallel>
+    									<!-- <SuppressFailure>
     										<Move to="Target" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="10"/>
     									</SuppressFailure>
     									<Shoot at="Target" fireMode="Burst" stance="Stand" duration="2.0" _startLog="starting to shoot"/>
-    									<!-- keep fighting or transition back to "Idle" -->
     									<Selector>
     										<AssertCondition condition="HasTarget"/>
     										<SendTransitionSignal name="GoTo_GoToHostage"/>
-    									</Selector>
+    									</Selector> -->
     								</Sequence>
     							<!-- </Parallel> -->
     						</Loop>

@@ -102,7 +102,7 @@
 
 								</SuppressFailure>
 
-								<Shoot at="Target" fireMode="Burst" stance="Stand" duration="2.0" _startLog="starting to shoot"/>
+								<Shoot at="Target" fireMode="BurstDrawFire" stance="Stand" duration="2.0" _startLog="starting to shoot"/>
 
 								<!-- keep fighting or transition back to "Idle" -->
 								<Selector>

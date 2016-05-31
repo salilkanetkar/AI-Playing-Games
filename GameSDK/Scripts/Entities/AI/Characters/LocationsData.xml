@@ -1,9 +1,9 @@
 <Data>
  <LocationTable>
   <HostagesLoc>
-   <HosLocation HIndex="1" HName="Hostage2" HLoc="112.51961,30.623842,32.208447"/>
-   <HosLocation HIndex="2" HName="Hostage3" HLoc="137.6938,69.261208,32.208447"/>
-   <HosLocation HIndex="3" HName="Hostage1" HLoc="89.309608,36.162678,32.208447"/>
+   <HosLocation HIndex="1" HName="Hostage2" HLoc="121.25733,62.907814,32.208447"/>
+   <HosLocation HIndex="2" HName="Hostage1" HLoc="90.258324,33.912231,32.208447"/>
+   <HosLocation HIndex="3" HName="Hostage3" HLoc="137.6938,69.261208,32.208447"/>
   </HostagesLoc>
   <MedicLoc>
    <MedLocation MIndex="1" MName="Medic1" MLoc="114.58353,61.016644,32.158447"/>

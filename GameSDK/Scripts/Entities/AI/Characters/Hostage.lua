@@ -21,20 +21,26 @@ Hostage_x = {
     bAdditionalBool = false,
     bRescued = false,
     vectorAIPoint = {x=0,y=0,z=0},
+    sRescuerName = "",
   }
 }
 
-function Hostage_x:OnEnemySeen()
-  AIBase.OnEnemySeen(self);
+-- function Hostage_x:OnEnemySeen()
+--   AIBase.OnEnemySeen(self);
+--
+--   local attentionTarget = AI.GetAttentionTargetEntity(self.id);
+--
+--   if (attentionTarget.Properties.esFaction == "Players" or attentionTarget.Properties.esFaction == "Friend") then
+--     if (bRescued == true) then
+--       AI.SetRefPointPosition(self.id, vectorAIPoint)
+--       AI.Signal(SIGNALFILTER_SENDER, 1, "OnMoveToRescuer", self.id)
+--     end
+--   end
+-- end
 
-  local attentionTarget = AI.GetAttentionTargetEntity(self.id);
-
-  if (attentionTarget.Properties.esFaction == "Players" or attentionTarget.Properties.esFaction == "Friend") then
-    if (bRescued == true) then
-      AI.SetRefPointPosition(self.id, vectorAIPoint)
-      AI.Signal(SIGNALFILTER_SENDER, 1, "OnMoveToRescuer", self.id)
-    end
-  end
+function Hostage_x:GetRescuerPos()
+  local RescuerPosition = System.GetEntityByName(self.Properties.sRescuerName):GetWorldPos()
+  AI.SetRefPointPosition(self.id, RescuerPosition)
 end
 
 mergef(Hostage_x,Human_x,1)
