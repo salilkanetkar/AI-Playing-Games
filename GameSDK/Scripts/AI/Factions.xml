@@ -35,12 +35,22 @@
     <Reaction faction="Players" reaction="hostile" />
     <Reaction faction="Grunts" reaction="hostile" />
 		<Reaction faction="Medics" reaction="friendly" />
+    <Reaction faction="CTFriend" reaction="friendly" />
   </Faction>
 
 	<Faction name="Hostage" default="neutral">
 		<Reaction faction="Players" reaction="hostile" />
 		<Reaction faction="Friend" reaction="hostile" />
 		<Reaction faction="Medics" reaction="hostile" />
+    <Reaction faction="CTFriend" reaction="friendly"/>
 	</Faction>
+
+  <Faction name="CTFriend" default="neutral">
+    <Reaction faction="Players" reaction="friendly" />
+    <Reaction faction="Grunts" reaction="hostile" />
+	  <Reaction faction="Medics" reaction="friendly" />
+	  <Reaction faction="Friend" reaction="friendly" />
+  </Faction>
+
 
 </Factions>

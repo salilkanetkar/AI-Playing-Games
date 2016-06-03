@@ -1,0 +1,14 @@
+<Definition root="Data">
+  
+  <Array name="player_pos" elementName="Pos">
+	<!--<Property name="t" type="float" />-->
+    <Property name="pos" type="Vec3" />
+  </Array>
+  
+  <Array name="player_health" elementName="Health">
+	<!--<Property name="t" type="float" />-->
+    <Property name="h" type="int" />
+  </Array>
+  
+  
+</Definition>

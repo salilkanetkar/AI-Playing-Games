@@ -16,18 +16,66 @@ CT_x = {
     iMedCount = 0,
     sCurrentHostage = "",
     vectorCurrentHosLoc = {},
-    sCurrentEnemy = "",
-  }
+	  sCurrentEnemy = "",
+    bGroupLeader = false,
+    -- vectorTeammates = {},
+    -- iEnemiesKilled = 0,
+  },
+  Group = {
+    -- bGroupLeader = false,
+    vectorTeammates = {},
+    iEnemiesKilled = 0,
+  },
+  time_elapsed = 0.0,
+	player_pos = {},
+	player_health = {},
+  xml_def_path = "Scripts/Entities/AI/Characters/DataDef.xml",
+  xml_data_path = "DataData.xml",
 }
+
+function CT_x:OnInit()
+  self:Activate(1);
+end
+
+function CT_x:OnUpdate(dt)
+  if (not System.IsEditing()) then
+    self.time_elapsed = self.time_elapsed + dt;
+	Log(tostring("hey I am update"))
+  end
+end
 
 function CT_x:ExecuteTest()
   Log("Game Won!!")
+  CryAction.SaveXML(self.xml_def_path, self.xml_data_path, self)
+  self.time_elapsed = 0.0
+ self.player_pos = {}
+ self.player_health = {}
 end
+
+function CT_x:Savefile()
+  Log(tostring("File updated"))
+  CryAction.SaveXML(self.xml_def_path, self.xml_data_path, self)
+end
+-- function CT_x:OnReset(bGameStart)
+-- 	self.time_elapsed = 0.0
+-- 	if(not bGameStart) then
+-- 		 CryAction.SaveXML(self.xml_def_path, self.xml_data_path, self)
+-- 	end
+--   self.player_pos = {}
+--   self.player_health = {}
+--
+-- end
 
 function CT_x:CheckHostageRescued()
   if (self.Properties.iHostageCount == self.Properties.iHostageRescued) then
     AI.SetBehaviorVariable(self.id, "AllHostagesRescued", true)
     AI.Signal(0, -1, "GoTo_GameWon", self.id)
+    if #self.Group.vectorTeammates > 0 then
+      for i = 1, #self.Group.vectorTeammates do
+        local entId = System.GetEntityIdByName(self.Group.vectorTeammates[i])
+        AI.Signal(0, -1, "GoTo_GameWon", entId)
+      end
+    end
     Log(tostring("All hostages rescued"))
   else
     Log(tostring("Hostage not rescued yet"))
@@ -46,6 +94,16 @@ function CT_x:InitHostageLoc()
       MedicLoc = {}
     }
   }
+  -- Initialize the list of all the teammates
+  local team = System.GetEntitiesByClass("CounterTerrorist")
+  if (next(team) ~= nil) then
+    local numTeam = table.getn(team)
+    for i = 1, numTeam do
+      if (team[i]:GetName() ~= self:GetName()) then
+        self.Group.vectorTeammates[#self.Group.vectorTeammates + 1] = team[i]:GetName()
+      end
+    end
+  end
 
   if (next(mEntities) ~= nil) then
     local mNum = table.getn(mEntities)
@@ -72,7 +130,7 @@ function CT_x:InitHostageLoc()
       }
       table.insert(Data.LocationTable.HostagesLoc, tmp)
     end
-  end
+
   Log(tostring("Locations initialized"))
   CryAction.SaveXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "D:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml", Data)
   -- AI.Signal(0,-1,"OnHostageInit",self.id)
@@ -80,93 +138,129 @@ function CT_x:InitHostageLoc()
   -- if self.Properties.iHostageCount > 0 then
     AI.SetBehaviorVariable(self.id, "LocationsInitialized", true)
     return true
-  -- end
+  end
 end
 
+
+-- Find the nearest hostage based on the importance of the hostage
+-- The group leader will lead and his teammates are supposed to follow him covering
+-- from two different angles
 function CT_x:FindNearestHostage()
-  local Data = CryAction.LoadXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "D:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml")
-  -- local HostLoc = {}
-  local myPos = self:GetWorldPos()
-  local DistTable = {}
-  local shortestDist = 0
-  for i = 1, self.Properties.iHostageCount do
-    local tempPos = Data.LocationTable.HostagesLoc[i].HLoc
-    -- table.insert(HostLoc, Data.LocationTable.HostagesLoc[i].HLoc)
-    local tmpDist = DistanceVectors(myPos, tempPos)
-    local entity = System.GetEntityByName(Data.LocationTable.HostagesLoc[i].HName)
-    if shortestDist == 0 then
-      if entity.Properties.bRescued == false then
-        shortestDist = tmpDist
-        sCurrentHostage = Data.LocationTable.HostagesLoc[i].HName
-        vectorCurrentHosLoc = Data.LocationTable.HostagesLoc[i].HLoc
-        table.insert(DistTable, tmpDist)
-      end
-    else
-      if tmpDist < shortestDist then
+  if (self.Properties.bGroupLeader == true) then
+    local Data = CryAction.LoadXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "D:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml")
+    -- local HostLoc = {}
+    local myPos = self:GetWorldPos()
+    local DistTable = {}
+    local shortestDist = 0
+    for i = 1, self.Properties.iHostageCount do
+      local tempPos = Data.LocationTable.HostagesLoc[i].HLoc
+      -- table.insert(HostLoc, Data.LocationTable.HostagesLoc[i].HLoc)
+      local tmpDist = DistanceVectors(myPos, tempPos)
+      local entity = System.GetEntityByName(Data.LocationTable.HostagesLoc[i].HName)
+      if shortestDist == 0 then
         if entity.Properties.bRescued == false then
           shortestDist = tmpDist
           sCurrentHostage = Data.LocationTable.HostagesLoc[i].HName
           vectorCurrentHosLoc = Data.LocationTable.HostagesLoc[i].HLoc
           table.insert(DistTable, tmpDist)
         end
+      else
+        if tmpDist < shortestDist then
+          if entity.Properties.bRescued == false then
+            shortestDist = tmpDist
+            sCurrentHostage = Data.LocationTable.HostagesLoc[i].HName
+            vectorCurrentHosLoc = Data.LocationTable.HostagesLoc[i].HLoc
+            table.insert(DistTable, tmpDist)
+          end
+        end
       end
     end
-  end
+    if next(DistTable) == nil then
+      self.Properties.iHostageRescued = self.Properties.iHostageCount
+      AI.Signal(0, -1, "GoTo_Idle", self.id)
+    else
+      AI.SetRefPointPosition(self.id, vectorCurrentHosLoc)
+      if shortestDist <= 15 then
+        AI.Signal(0, -1, "GoTo_WalkToHostage", self.id)
+      end
+    end
+    Log(sCurrentHostage)
+    Log(Vec2Str(vectorCurrentHosLoc))
+    Log(tostring(shortestDist))
 
-  if next(DistTable) == nil then
-    self.Properties.iHostageRescued = self.Properties.iHostageCount
-    AI.Signal(0, -1, "GoTo_Idle", self.id)
   else
-    AI.SetRefPointPosition(System.GetEntityIdByName('CounterTerrorist1'), vectorCurrentHosLoc)
-    if shortestDist <= 15 then
-      AI.Signal(0, -1, "GoTo_WalkToHostage", self.id)
+    -- local followPos = {x=0, y=0, z=0}
+    -- for i=1, #vectorTeammates do
+    --   if vectorTeammates[i].Properties.bGroupLeader == true then
+    --     local lead = vectorTeammates[i]
+    --     local leadPos = System.GetEntityByName(lead):GetWorldPos()
+    -- end
+    -- AI.SetRefPointPosition(self.id, leadPos)
+    AI.Signal(0, -1, "GoTo_FollowLeader", self.id)
+  end
+end
+
+function CT_x:FindFormationPos()
+  local leadPos = {}
+  local pos1 = {}
+  for i=1, #self.Group.vectorTeammates do
+    local ent = System.GetEntityByName(self.Group.vectorTeammates[i])
+    if ent.Properties.bGroupLeader == true then
+      local lead = self.Group.vectorTeammates[i]
+      leadPos = System.GetEntityByName(lead):GetWorldPos()
+    else
+      pos1 = System.GetEntityByName(self.Group.vectorTeammates[i]):GetWorldPos()
     end
   end
-  Log(sCurrentHostage)
-  Log(Vec2Str(vectorCurrentHosLoc))
-  Log(tostring(shortestDist))
+  if #self.Group.vectorTeammates <= 2 then
+    AI.SetRefPointPosition(self.id, leadPos)
+  else
+    -- local pos1 = System.GetEntityByName(vectorTeammates[1]:GetWorldPos())
+    -- local pos2 = System.GetEntityByName(vectorTeammates[2]:GetWorldPos())
+    if (DistanceVectors(self:GetWorldPos(), leadPos) > 5) then
+      AI.SetRefPointPosition(self.id, leadPos)
+    else
+      AI.SetRefPointPosition(self.id, pos1)
+    end
+  end
 end
 
 function CT_x:ReleaseHostage()
   local currentEnt = System.GetEntityByName(sCurrentHostage)
   local entId = System.GetEntityIdByName(sCurrentHostage)
   currentEnt.Properties.bRescued = true
-  currentEnt.Properties.sRescuerName = self:GetName()
   self.Properties.iHostageRescued = self.Properties.iHostageRescued + 1
-  self.Properties.sCurrentHostage = ""
-  self.Properties.vectorCurrentHosLoc = {}
+  currentEnt.Properties.sRescuerName = self:GetName()
   AI.Signal(0, -1, "WalkWithMe", entId)
 end
-
-CT_x.OnBulletRain = function(self, entity, sender, data)
-  AI.Signal(0, -1, "OnHostileSeen", self.id)
-end
---
--- function CT_x:FindNearestEnemies()
---
--- end
 
 function CT_x:OnEnemySeen()
   --AIBase.OnEnemySeen(self);
   local attentionTarget = AI.GetAttentionTargetEntity(self.id);
   local targetFaction = attentionTarget.Properties.esFaction
   self.Properties.sCurrentEnemy = attentionTarget:GetName()
-  -- Log(self.Properties.sCurrentEnemy)
   if (targetFaction == "Friend" or targetFaction == "Medics" or targetFaction == "Hostage" or targetFaction == "Players") then
 	Log(tostring("Should not Kill"))
 	AI.Signal(SIGNALFILTER_SENDER, 1, "OnFriendSeen", self.id)
   else
+	Log(tostring(attentionTarget.Properties.esFaction))
 	Log(tostring("Should Kill"))
 	AI.Signal(SIGNALFILTER_SENDER, 1, "OnHostileSeen", self.id)
   end
 end
 
+-- Function to let the teammates throw nades for damage and then go for open combat
+function CT_x:OnSuspectedSoundHeard()
+
+
 function CT_x:FindIfEnemyDead()
-  local enemy = System.GetEntityByName(self.Properties.sCurrentEnemy)
-  -- Log(self.Properties.sCurrentEnemy)
-  if (enemy:IsDead()) then
-    self.Properties.sCurrentEnemy = ""
-    AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
+  if(self.Properties.sCurrentEnemy ~= "") then
+    local enemy = System.GetEntityByName(self.Properties.sCurrentEnemy)
+    -- Log(self.Properties.sCurrentEnemy)
+    if (enemy:IsDead()) then
+      self.Properties.sCurrentEnemy = ""
+      AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
+    end
   end
 end
 
@@ -212,6 +306,7 @@ function CT_x:reduceHostageNumber()
 	return
 end
 --]]
+
 function CT_x:OnFindHostage()
   -- local locData = CryEngine.LoadXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "D:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml")
   Log(tostring("finding hostage location"))
@@ -236,6 +331,7 @@ function CT_x:CheckAIHealth()
 		Log(tostring(self:IsDead()));
 		AI.Signal(SIGNALFILTER_SENDER, 1, "GoToGameOver", self.id)
 	else
+    -- Log(tostring("Not Dead yet..."))
 		return
 	end
 end
@@ -253,3 +349,32 @@ AddCombatMoveAssignment(CounterTerrorist)
 AddPsychoCombatAllowedAssignment(CounterTerrorist)
 
 CounterTerrorist:Expose()
+
+----------------------
+-- FlowEvents
+----------------------
+function CT_x:On_Position(sender, params)
+	--Log(tostring(params));
+  self.player_pos[#self.player_pos+1] = {pos = params };
+end
+
+function CT_x:On_Health(sender, params)
+  --Log(tostring(params));
+  local CtHealth = self.actor:GetHealth()
+  -- Log(tostring(CtHealth))
+  self.player_health[#self.player_health+1] = { h = CtHealth };
+end
+
+function CT_x:On_Dead(sender, params)
+  Log("From flowgraph " .. tostring(params))
+  CryAction.SaveXML(self.xml_def_path, self.xml_data_path, self)
+end
+
+CounterTerrorist.FlowEvents = {
+  Inputs = {
+    Position = { CT_x.On_Position, "Vec3" },
+	  Health = {CT_x.On_Health, "int"},
+    Dead = {CT_x.On_Dead, "int"}
+  },
+  Outputs = {},
+}

@@ -82,6 +82,7 @@
           <Transition to="WalkToHostage" onEvent="GoTo_WalkToHostage" />
           <!-- <Transition to="MoveToCover" onEvent="OnMoveToCover"/> -->
           <Transition to="Combat" onEvent="OnBulletRain"/>
+          <Transition to="FollowLeader" onEvent="GoTo_FollowLeader"/>
 				</Transitions>
 				<BehaviorTree>
 					<!-- <Loop> -->
@@ -108,6 +109,43 @@
 				</BehaviorTree>
 			</State>
 
+      <State name="TeamIdle">
+        <Transitions>
+          <Transition to="FollowLeader" onEvent="GoTo_FollowLeader" />
+          <Transition to="Idle" onEvent="GoTo_Idle"/>
+          <Transition to="GameWon" onEvent="GoTo_GameWon"/>
+          <Transition to="GameOver" onEvent="GoToGameOver"/>
+        </Transitions>
+        <BehaviorTree>
+          <Sequence>
+            <ExecuteLua code="entity:CheckHostageRescued()"/>
+            <SetAlertness value="0"/>
+            <ExecuteLua code="entity.actor:HolsterItem(true)"/>
+            <Stance name="Relaxed"/>
+            <Animate name="ZZ_AI_idleBreak"/>
+            <Halt/>
+          </Sequence>
+        </BehaviorTree>
+
+      </State>
+
+      <State name="FollowLeader">
+        <Transitions>
+          <Transition to="TeamIdle" onEvent="GoTo_TeamIdle"/>
+          <Transition to="Idle" onEvent="GoTo_Idle"/>
+          <Transition to="Combat" onEvent="OnHostileSeen"/>
+          <Transition to="GameWon" onEvent="GoTo_GameWon"/>
+          <Transition to="GameOver" onEvent="GoTo_GameOver"/>
+        </Transitions>
+        <BehaviorTree>
+          <Loop>
+            <Sequence>
+              <ExecuteLua code="entity:FindFormationPos()"/>
+              <Move to="RefPoint" speed="Walk" stance="Stand" avoidDangers="1" stopWithinDistance="5"/>
+            </Sequence>
+          </Loop>
+        </BehaviorTree>
+      </State>
 
       <State name="WalkToHostage">
         <Transitions>
@@ -155,8 +193,10 @@
     						<Loop _startLog="main combat loop">
     							<!-- <Parallel successMode="any" failureMode="any"> -->
     								<Sequence>
-    									<Signal name="CheckAIHealth" />
+                      <ExecuteLua code="entity:CheckAIHealth()" />
                       <Parallel>
+                        <!-- <Loop>
+                        </Loop> -->
                         <Selector>
       <!--
   											=================================================
@@ -272,6 +312,7 @@
 				<BehaviorTree>
 					<Sequence>
             <Signal name="ExecuteTest"/>
+            <ExecuteLua code="entity:Savefile()"/>
 						<Bubble message="Yes! Game Won" duration="5.0" balloon="true" log="true" />
 						<SetAlertness value="0"/>
 						<ExecuteLua code="entity.actor:HolsterItem(true)"/>
@@ -290,6 +331,8 @@
 			<State name="GameOver">
 				<BehaviorTree>
 					<Sequence>
+            <Signal name="Savefile"/>
+            <!-- <ExecuteLua code="entity:Savefile()"/> -->
 						<Bubble message="No! Game Lost" duration="5.0" balloon="true" log="true" />
 						<SetAlertness value="0"/>
 						<ExecuteLua code="entity.actor:HolsterItem(false)"/>
