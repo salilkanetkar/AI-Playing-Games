@@ -200,6 +200,8 @@ function CT_x:FindNearestHostage()
   end
 end
 
+-- If the counter terrorist entity is not a leader, it will realize that it has to follow
+-- the leader and the RefPoint is set to be the leader.
 function CT_x:FindFormationPos()
   local leadPos = {}
   local pos1 = {}
@@ -251,6 +253,8 @@ end
 
 -- Function to let the teammates throw nades for damage and then go for open combat
 function CT_x:OnSuspectedSoundHeard()
+  
+end
 
 
 function CT_x:FindIfEnemyDead()
