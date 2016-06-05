@@ -70,15 +70,15 @@ function CT_x:CheckHostageRescued()
   if (self.Properties.iHostageCount == self.Properties.iHostageRescued) then
     AI.SetBehaviorVariable(self.id, "AllHostagesRescued", true)
     AI.Signal(0, -1, "GoTo_GameWon", self.id)
-    if #self.Group.vectorTeammates > 0 then
+    if #self.Group.vectorTeammates-1 > 0 then
       for i = 1, #self.Group.vectorTeammates do
         local entId = System.GetEntityIdByName(self.Group.vectorTeammates[i])
         AI.Signal(0, -1, "GoTo_GameWon", entId)
       end
     end
-    Log(tostring("All hostages rescued"))
+    Log(self:GetName() .. tostring(" All hostages rescued"))
   else
-    Log(tostring("Hostage not rescued yet"))
+    Log(self:GetName() .. tostring(" Hostage not rescued yet"))
   end
 end
 
@@ -95,15 +95,17 @@ function CT_x:InitHostageLoc()
     }
   }
   -- Initialize the list of all the teammates
-  local team = System.GetEntitiesByClass("CounterTerrorist")
-  if (next(team) ~= nil) then
-    local numTeam = table.getn(team)
-    for i = 1, numTeam do
-      if (team[i]:GetName() ~= self:GetName()) then
-        self.Group.vectorTeammates[#self.Group.vectorTeammates + 1] = team[i]:GetName()
-      end
-    end
-  end
+  -- local team = System.GetEntitiesByClass("CounterTerrorist")
+  -- if (next(team) ~= nil) then
+  --   local numTeam = table.getn(team)
+  --   for i = 1, numTeam do
+  --     if (team[i]:GetName() ~= self:GetName()) then
+  --       self.Group.vectorTeammates[#self.Group.vectorTeammates + 1] = team[i]:GetName()
+  --     end
+  --   end
+  -- end
+  self.Group.vectorTeammates[#self.Group.vectorTeammates+1] = self:GetName()
+  Log(tostring(#self.Group.vectorTeammates))
 
   if (next(mEntities) ~= nil) then
     local mNum = table.getn(mEntities)
@@ -147,6 +149,7 @@ end
 -- from two different angles
 function CT_x:FindNearestHostage()
   if (self.Properties.bGroupLeader == true) then
+    Log(self:GetName() .. " I'm leader ")
     local Data = CryAction.LoadXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "D:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml")
     -- local HostLoc = {}
     local myPos = self:GetWorldPos()
@@ -189,42 +192,25 @@ function CT_x:FindNearestHostage()
     Log(tostring(shortestDist))
 
   else
-    -- local followPos = {x=0, y=0, z=0}
-    -- for i=1, #vectorTeammates do
-    --   if vectorTeammates[i].Properties.bGroupLeader == true then
-    --     local lead = vectorTeammates[i]
-    --     local leadPos = System.GetEntityByName(lead):GetWorldPos()
-    -- end
-    -- AI.SetRefPointPosition(self.id, leadPos)
     AI.Signal(0, -1, "GoTo_FollowLeader", self.id)
+    Log ("I'm not leader " .. self:GetName())
   end
 end
 
 -- If the counter terrorist entity is not a leader, it will realize that it has to follow
 -- the leader and the RefPoint is set to be the leader.
 function CT_x:FindFormationPos()
-  local leadPos = {}
-  local pos1 = {}
+  local lead = ""
   for i=1, #self.Group.vectorTeammates do
     local ent = System.GetEntityByName(self.Group.vectorTeammates[i])
     if ent.Properties.bGroupLeader == true then
-      local lead = self.Group.vectorTeammates[i]
-      leadPos = System.GetEntityByName(lead):GetWorldPos()
-    else
-      pos1 = System.GetEntityByName(self.Group.vectorTeammates[i]):GetWorldPos()
+      Log ("My leader is " .. ent:GetName())
+      lead = ent:GetName()
     end
   end
-  if #self.Group.vectorTeammates <= 2 then
-    AI.SetRefPointPosition(self.id, leadPos)
-  else
-    -- local pos1 = System.GetEntityByName(vectorTeammates[1]:GetWorldPos())
-    -- local pos2 = System.GetEntityByName(vectorTeammates[2]:GetWorldPos())
-    if (DistanceVectors(self:GetWorldPos(), leadPos) > 5) then
-      AI.SetRefPointPosition(self.id, leadPos)
-    else
-      AI.SetRefPointPosition(self.id, pos1)
-    end
-  end
+  -- Log(self:GetName() .. " is finding formation leader and got " .. lead)
+  local leadPos = System.GetEntityByName(lead):GetWorldPos()
+  AI.SetRefPointPosition(self.id, leadPos)
 end
 
 function CT_x:ReleaseHostage()
@@ -242,29 +228,68 @@ function CT_x:OnEnemySeen()
   local targetFaction = attentionTarget.Properties.esFaction
   self.Properties.sCurrentEnemy = attentionTarget:GetName()
   if (targetFaction == "Friend" or targetFaction == "Medics" or targetFaction == "Hostage" or targetFaction == "Players") then
-	Log(tostring("Should not Kill"))
-	AI.Signal(SIGNALFILTER_SENDER, 1, "OnFriendSeen", self.id)
+  	Log(tostring("Should not Kill"))
+  	AI.Signal(SIGNALFILTER_SENDER, 1, "OnFriendSeen", self.id)
   else
-	Log(tostring(attentionTarget.Properties.esFaction))
-	Log(tostring("Should Kill"))
-	AI.Signal(SIGNALFILTER_SENDER, 1, "OnHostileSeen", self.id)
+  	Log(tostring(attentionTarget.Properties.esFaction))
+  	Log(tostring("Should Kill"))
+  	AI.Signal(SIGNALFILTER_SENDER, 1, "OnHostileSeen", self.id)
+  end
+  for i = 1, #self.Group.vectorTeammates do
+    if self.Group.vectorTeammates[i] ~= self:GetName() then
+      local ent = System.GetEntityIdByName(self.Group.vectorTeammates[i])
+      System.GetEntityByName(self.Group.vectorTeammates[i]).Properties.sCurrentEnemy = attentionTarget:GetName()
+      AI.SetAttentiontarget(ent, System.GetEntityIdByName(AI.GetAttentionTargetOf(self.id)))
+      AI.Signal(0, -1, "OnHostileSeen", ent)
+    end
   end
 end
 
--- Function to let the teammates throw nades for damage and then go for open combat
-function CT_x:OnSuspectedSoundHeard()
-  
+
+function CT_x:OnEnemyDamage(sender, data)
+  AI.SetAttentiontarget(self.id, data.id)
+  Log(AI.GetAttentionTargetEntity(self.id):GetName())
+  AI.Signal(0, -1, "OnHostileSeen", self.id)
+  Log("Getting attacked")
+  if #self.Group.vectorTeammates > 0 then
+    for i = 1, #self.Group.vectorTeammates do
+      AI.SetAttentiontarget(System.GetEntityIdByName(self.Group.vectorTeammates[i]), data.id)
+      AI.Signal(0, -1, "OnHostileSeen", System.GetEntityIdByName(self.Group.vectorTeammates[i]))
+    end
+  end
+end
+
+function CT_x:CheckToNade()
+  if self.Properties.bGroupLeader == false then
+    local enemiesList = System.GetEntitiesByClass("Human")
+    local enemyNearCount = 0
+    Log("Hello... checking whether to nade")
+    if #enemiesList > 0 then
+      for i = 1, #enemiesList do
+        local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
+        if dist <= 20 then
+          enemyNearCount = enemyNearCount + 1
+        end
+      end
+    end
+    -- if enemyNearCount > (#self.Group.vectorTeammates + 1) then
+    --   local prob = math.random()
+    --   if prob > 0.5 then
+        AI.ThrowGrenade(entity.id, AI_RGT_FRAG_GRENADE, AI_REG_ATTENTIONTARGET)
+      -- end
+    -- end
+  end
 end
 
 
 function CT_x:FindIfEnemyDead()
-  if(self.Properties.sCurrentEnemy ~= "") then
-    local enemy = System.GetEntityByName(self.Properties.sCurrentEnemy)
-    -- Log(self.Properties.sCurrentEnemy)
-    if (enemy:IsDead()) then
-      self.Properties.sCurrentEnemy = ""
+  local enemyTarget = AI.GetAttentionTargetEntity(self.id)
+  if enemyTarget ~= nil then
+    if enemyTarget:IsDead() == true then
       AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
     end
+  else
+    AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
   end
 end
 
@@ -370,8 +395,34 @@ function CT_x:On_Health(sender, params)
 end
 
 function CT_x:On_Dead(sender, params)
-  Log("From flowgraph " .. tostring(params))
-  CryAction.SaveXML(self.xml_def_path, self.xml_data_path, self)
+  if (self:IsDead()) then
+    local myIndex = 0
+    local numTeam = #self.Group.vectorTeammates
+    for i = 1,  numTeam do
+      if self.Group.vectorTeammates[i] == self:GetName() then
+        myIndex = i
+      end
+    end
+    table.remove(self.Group.vectorTeammates, myIndex)
+    numTeam = numTeam - 1
+    if (self.Properties.bGroupLeader == true) then
+      self.Properties.bGroupLeader = false
+      if (numTeam > 0) then
+        local randEnt = math.random(1, numTeam)
+        local ent = System.GetEntityByName(self.Group.vectorTeammates[randEnt])
+        ent.Properties.bGroupLeader = true
+        Log("New Leader is " .. self.Group.vectorTeammates[randEnt])
+        Log(tostring(ent.Properties.bGroupLeader) .. " I'm the leader ")
+        Log(tostring(#self.Group.vectorTeammates) .. " Size of the group")
+      end
+    end
+    Log("From flowgraph " .. tostring(params))
+    CryAction.SaveXML(self.xml_def_path, self.xml_data_path, self)
+  else
+    local mytarget = AI.GetAttentionTargetEntity(self.id)
+    AI.SetAttentiontarget(self.id, mytarget.id)
+    AI.Signal(0, -1, "OnHostileSeen", self.id)
+  end
 end
 
 CounterTerrorist.FlowEvents = {

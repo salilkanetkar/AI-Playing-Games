@@ -39,7 +39,7 @@
 					<!-- <Transition to="GoToHostage" onEvent="GoTo_GoToHostage"/> -->
           <Transition to="GoToHostage" onEvent="GoTo_GoToHostage"/>
 					<Transition to="GameWon" onEvent="GoTo_GameWon"/>
-					<Transition to="Combat" onEvent="OnHostileSeen"/>
+					<!-- <Transition to="Combat" onEvent="OnHostileSeen"/> -->
 				</Transitions>
 				<BehaviorTree>
 					<Sequence>
@@ -98,9 +98,10 @@
                 <!-- <Loop> -->
                   <!-- <Animate name="AI_SearchLookAround"/> -->
                 <!-- </Loop> -->
-                <Move to="RefPoint" speed="Walk" stance="Stand" avoidDangers="1" stopWithinDistance="15" />
+              <Move to="RefPoint" speed="Walk" stance="Stand" avoidDangers="1" stopWithinDistance="15" />
               <!-- </Parallel> -->
-              <SendTransitionSignal name="GoTo_WalkToHostage"/>
+              <Wait duration="0.1" variation="0"/>
+              <SendTransitionSignal name="GoTo_Idle"/>
 							<!-- <Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="5" />
 							<SendTransitionSignal name="GoTo_Idle"/>
 							<ExecuteLua code="AI.QueueBubbleMessage(System.GetEntityIdByName('CounterTerrorist1'),'Going to retrieve hostage')"/> -->
@@ -136,6 +137,7 @@
           <Transition to="Combat" onEvent="OnHostileSeen"/>
           <Transition to="GameWon" onEvent="GoTo_GameWon"/>
           <Transition to="GameOver" onEvent="GoTo_GameOver"/>
+          <Transition to="GoToHostage" onEvent="GoTo_GoToHostage"/>
         </Transitions>
         <BehaviorTree>
           <Loop>
@@ -174,6 +176,7 @@
 				<Transitions>
 					<!-- <Transition to="Idle" onEvent="GoTo_Idle"/> -->
 					<Transition to="GoToHostage" onEvent="GoTo_GoToHostage"/>
+          <Transition to="FollowLeader" onEvent="GoTo_FollowLeader"/>
 					<Transition to="GameOver" onEvent="GoToGameOver"/>
 				</Transitions>
 				<BehaviorTree>
@@ -224,6 +227,7 @@
                                                   </IfTime>
                                               </SuppressFailure>
                                               <Shoot at="Target" fireMode="Burst" stance="Alerted" duration="999"/>
+                                              <ExecuteLua code="entity:CheckToNade()"/>
                                           </Sequence>
                                       </Parallel>
                                   </Sequence>
