@@ -54,7 +54,7 @@
               <AssertLua code="return entity:InitHostageLoc()"/>
             </Selector>
 
-            <!-- <Wait duration="0.1" variation="0.1"/> -->
+            <Wait duration="0.1" variation="0.1"/>
             <ExecuteLua code="entity:CheckHostageRescued()"/>
             <SendTransitionSignal name="GoTo_GoToHostage"/>
 
@@ -82,7 +82,8 @@
           <Transition to="WalkToHostage" onEvent="GoTo_WalkToHostage" />
           <!-- <Transition to="MoveToCover" onEvent="OnMoveToCover"/> -->
           <Transition to="Combat" onEvent="OnBulletRain"/>
-          <Transition to="FollowLeader" onEvent="GoTo_FollowLeader"/>
+          <Transition to="FollowLeader" onEvent="GoTo_FollowLeader" />
+          <Transition to="TeamIdle" onEvent="GoTo_TeamIdle" />
 				</Transitions>
 				<BehaviorTree>
 					<!-- <Loop> -->
@@ -93,6 +94,7 @@
 							<!-- <Bubble message="In finding state" duration="5.0" balloon="true" log="true" /> -->
 							<!-- <ExecuteLua code="AI.SetRefPointPos(System.GetEntityIDByName('DummyPlayer1'), System.GetEntityByName('DummyPlayer1'):GetWorldPos())" /> -->
               <SetAlertness value="1"/>
+              <ExecuteLua code="entity:CheckTeamFollowing()"/>
               <ExecuteLua code="entity:FindNearestHostage()"/>
               <!-- <Parallel> -->
                 <!-- <Loop> -->
@@ -116,16 +118,20 @@
           <Transition to="Idle" onEvent="GoTo_Idle"/>
           <Transition to="GameWon" onEvent="GoTo_GameWon"/>
           <Transition to="GameOver" onEvent="GoToGameOver"/>
+          <Transition to="GoToHostage" onEvent="GoTo_GoToHostage"/>
         </Transitions>
         <BehaviorTree>
-          <Sequence>
-            <ExecuteLua code="entity:CheckHostageRescued()"/>
-            <SetAlertness value="0"/>
-            <ExecuteLua code="entity.actor:HolsterItem(true)"/>
-            <Stance name="Relaxed"/>
-            <Animate name="ZZ_AI_idleBreak"/>
-            <Halt/>
-          </Sequence>
+          <Loop>
+            <Sequence>
+              <!-- <ExecuteLua code="entity:CheckHostageRescued()"/> -->
+              <ExecuteLua code="entity:CheckTeamFollowing()"/>
+              <SetAlertness value="0"/>
+              <ExecuteLua code="entity.actor:HolsterItem(true)"/>
+              <Stance name="Relaxed"/>
+              <Animate name="ZZ_AI_idleBreak"/>
+              <!-- <Halt/> -->
+            </Sequence>
+          </Loop>
         </BehaviorTree>
 
       </State>
