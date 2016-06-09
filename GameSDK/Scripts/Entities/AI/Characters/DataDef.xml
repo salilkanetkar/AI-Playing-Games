@@ -5,10 +5,32 @@
     <Property name="pos" type="Vec3" />
   </Array>
   
+  
+  <Array name="player_direction" elementName="Dir">
+    <Property name="dir" type="Vec3" />
+  </Array> 
+  
+  
+  <Array name="player_vel" elementName="Vel">
+	<!--<Property name="v" type="float" />-->
+    <Property name="vel" type="Vec3" />
+  </Array>
+  
+   
+  
   <Array name="player_health" elementName="Health">
 	<!--<Property name="t" type="float" />-->
     <Property name="h" type="int" />
   </Array>
   
+  
+  
+  <Array name="enemy_count" elementName="ActiveEnemyCount">
+    <Property name="count" type="int" />
+  </Array>
+  
+  <Array name="nearest_enemy" elementName="NearestEnemy">
+    <Property name="nearestEnemy" type="int" />
+  </Array>
   
 </Definition>

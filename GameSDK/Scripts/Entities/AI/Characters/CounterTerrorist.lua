@@ -29,6 +29,10 @@ CT_x = {
   time_elapsed = 0.0,
 	player_pos = {},
 	player_health = {},
+	enemy_count = {},
+	player_vel = {},
+	player_direction = {},
+	nearest_enemy = {},
   xml_def_path = "Scripts/Entities/AI/Characters/DataDef.xml",
   xml_data_path = "DataData.xml",
 }
@@ -197,7 +201,6 @@ function CT_x:FindNearestHostage()
   end
 end
 
-
 -- Function to check if the teammates are following within a certain distance
 -- If not, the leader will stop and wait till they come into the radius and then
 -- proceeds to rescue the hostage.
@@ -219,6 +222,7 @@ function CT_x:CheckTeamFollowing()
     end
   end
 end
+
 
 -- If the counter terrorist entity is not a leader, it will realize that it has to follow
 -- the leader and the RefPoint is set to be the leader.
@@ -262,12 +266,10 @@ function CT_x:OnEnemySeen()
   end
   for i = 1, #self.Group.vectorTeammates do
     if self.Group.vectorTeammates[i] ~= self:GetName() then
-      local ent = System.GetEntityByName(self.Group.vectorTeammates[i])
-      -- System.GetEntityByName(self.Group.vectorTeammates[i]).Properties.sCurrentEnemy = attentionTarget:GetName()
-      if attentionTarget ~= AI.GetAttentionTargetEntity(ent.id) then
-        AI.SetAttentiontarget(ent.id, attentionTarget.id)
-        AI.Signal(0, -1, "OnHostileSeen", ent.id)
-      end
+      local ent = System.GetEntityIdByName(self.Group.vectorTeammates[i])
+      System.GetEntityByName(self.Group.vectorTeammates[i]).Properties.sCurrentEnemy = attentionTarget:GetName()
+      AI.SetAttentiontarget(ent, System.GetEntityIdByName(AI.GetAttentionTargetOf(self.id)))
+      AI.Signal(0, -1, "OnHostileSeen", ent)
     end
   end
 end
@@ -280,9 +282,8 @@ function CT_x:OnEnemyDamage(sender, data)
   Log("Getting attacked")
   if #self.Group.vectorTeammates > 0 then
     for i = 1, #self.Group.vectorTeammates do
-      local ent = System.GetEntityByName(self.Group.vectorTeammates[i])
-      AI.SetAttentiontarget(ent.id, data.id)
-      AI.Signal(0, -1, "OnHostileSeen", ent.id)
+      AI.SetAttentiontarget(System.GetEntityIdByName(self.Group.vectorTeammates[i]), data.id)
+      AI.Signal(0, -1, "OnHostileSeen", System.GetEntityIdByName(self.Group.vectorTeammates[i]))
     end
   end
 end
@@ -365,7 +366,7 @@ end
 --]]
 
 function CT_x:OnFindHostage()
-  -- local locData = CryEngine.LoadXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "D:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml")
+  -- local locData = CryEngine.LoadXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "C:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml")
   Log(tostring("finding hostage location"))
   -- if(hostageNumber == 4) then
 	-- AI.Signal(SIGNALFILTER_SENDER, 1, "AllHostagesRescued", self.id)
@@ -410,9 +411,71 @@ CounterTerrorist:Expose()
 ----------------------
 -- FlowEvents
 ----------------------
+
+
+
+
+
 function CT_x:On_Position(sender, params)
 	--Log(tostring(params));
+
+	--saving positions
+  local currentWeapon = self.inventory:GetCurrentItem()
+  if currentWeapon ~= nil then
+    Log("Current weapon is " .. currentWeapon.class)
+  end
   self.player_pos[#self.player_pos+1] = {pos = params };
+  -- Log(tostring(self:GetVelocity()))
+  self.player_vel[#self.player_vel+1] = {vel =self:GetVelocity() }
+  local enemiesList = System.GetEntitiesByClass("Human")
+  local enemyNearCount = 0
+  local mindist = 70
+    -- Log("Checking Enemy Distance and Count")
+    if #enemiesList > 0 then
+      for i = 1, #enemiesList do
+    --  local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
+		local dist = DistanceVectors(params, enemiesList[i]:GetWorldPos())
+		if dist < mindist then
+			mindist = dist
+		end
+        if dist <= 70 then
+			if not(enemiesList[i]:IsDead()) then
+				enemyNearCount = enemyNearCount + 1
+				self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+			else
+				enemyNearCount = enemyNearCount - 1
+				self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+			end
+		  -- Log(tostring("Enemy count is below"))
+		  -- Log(tostring(enemyNearCount))
+		  end
+      end
+	--self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+	self.nearest_enemy[#self.nearest_enemy+1] = { nearestEnemy = mindist };
+  --saving enemy count
+	--local e_table = System.GetEntitiesByClass("Human")
+	--Log(tostring(e_table))
+	--local e_count = tablelength(e_table)
+	--Log(tostring(e_count))
+	end
+end
+
+--function CT_x:On_Velocity(sender, params)
+	--Log(tostring(params));
+
+	--saving positions
+  --self.player_vel[#self.player_vel+1] = {vel = params };
+
+
+--end
+
+function CT_x:On_Direction(sender, params)
+	--Log(tostring(params));
+
+	--saving directional vectors
+	self.player_direction[#self.player_direction+1] = {dir = params };
+
+
 end
 
 function CT_x:On_Health(sender, params)
@@ -420,6 +483,12 @@ function CT_x:On_Health(sender, params)
   local CtHealth = self.actor:GetHealth()
   -- Log(tostring(CtHealth))
   self.player_health[#self.player_health+1] = { h = CtHealth };
+end
+
+function tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
 end
 
 function CT_x:On_Dead(sender, params)
@@ -447,10 +516,9 @@ function CT_x:On_Dead(sender, params)
     Log("From flowgraph " .. tostring(params))
     CryAction.SaveXML(self.xml_def_path, self.xml_data_path, self)
   else
-    AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
-  --   local mytarget = AI.GetAttentionTargetEntity(self.id)
-  --   AI.SetAttentiontarget(self.id, mytarget.id)
-  --   AI.Signal(0, -1, "OnHostileSeen", self.id)
+    -- local mytarget = AI.GetAttentionTargetEntity(self.id)
+    -- AI.SetAttentiontarget(self.id, mytarget.id)
+    AI.Signal(0, -1, "OnHostileSeen", self.id)
   end
 end
 
@@ -458,7 +526,11 @@ CounterTerrorist.FlowEvents = {
   Inputs = {
     Position = { CT_x.On_Position, "Vec3" },
 	  Health = {CT_x.On_Health, "int"},
-    Dead = {CT_x.On_Dead, "int"}
+	  Direction = {CT_x.On_Direction, "Vec3"},
+    Dead = {CT_x.On_Dead, "int"},
+--	Velocity = {CT_x.On_Velocity, "Vec3"}
+	--Direction = {CT_x.On_Direction, "Vec3"},
+	--ActiveEnemyCount = {CT_x.On_ActiveEnemyCount,"int"}
   },
   Outputs = {},
 }
