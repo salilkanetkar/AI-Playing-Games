@@ -54,9 +54,9 @@
               <AssertLua code="return entity:InitHostageLoc()"/>
             </Selector>
 
-            <Wait duration="0.1" variation="0.1"/>
-            <ExecuteLua code="entity:CheckHostageRescued()"/>
-            <SendTransitionSignal name="GoTo_GoToHostage"/>
+            <!-- <Wait duration="0.1" variation="0.1"/> -->
+            <!-- <ExecuteLua code="entity:CheckHostageRescued()"/>
+            <SendTransitionSignal name="GoTo_GoToHostage"/> -->
 
             <SetAlertness value="0"/>
             <ExecuteLua code="entity.actor:HolsterItem(true)"/>
@@ -96,11 +96,12 @@
               <SetAlertness value="1"/>
               <ExecuteLua code="entity:CheckTeamFollowing()"/>
               <ExecuteLua code="entity:FindNearestHostage()"/>
+              <Wait duration="0.1" variation="0"/>
               <!-- <Parallel> -->
                 <!-- <Loop> -->
                   <!-- <Animate name="AI_SearchLookAround"/> -->
                 <!-- </Loop> -->
-              <Move to="RefPoint" speed="Walk" stance="Stand" avoidDangers="1" stopWithinDistance="15" />
+              <Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="1" stopWithinDistance="15" />
               <!-- </Parallel> -->
               <Wait duration="0.1" variation="0"/>
               <SendTransitionSignal name="GoTo_Idle"/>
@@ -303,12 +304,17 @@
 			<State name="GoToMedic">
 				<Transitions>
 					<Transition to="Idle" onEvent="GoTo_Idle"/>
+          <Transition to="GoToHostage" onEvent="GoTo_GoToHostage"/>
 				</Transitions>
 				<BehaviorTree>
 					<Sequence>
-						<Bubble message="I am low on health! Need to find a medic" duration="5.0" balloon="true" log="true" />
+            <ExecuteLua code="entity:FindNearestMedic()"/>
+						<!-- <Bubble message="I am low on health! Need to find a medic" duration="5.0" balloon="true" log="true" /> -->
 						<Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="2.5" />
-						<SendTransitionSignal name="GoTo_Idle"/>
+            <Loop>
+              <ExecuteLua code="entity:CheckWithMedic()"/>
+            </Loop>
+						<!-- <SendTransitionSignal name="GoTo_GoToHostage"/> -->
 					</Sequence>
 				</BehaviorTree>
 			</State>

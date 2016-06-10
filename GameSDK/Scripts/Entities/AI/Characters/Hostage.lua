@@ -38,6 +38,24 @@ Hostage_x = {
 --   end
 -- end
 
+function Hostage_x:OnEnemySeen()
+  if self.Properties.bRescued == false then
+    local attentionTarget = AI.GetAttentionTargetEntity(self.id)
+    if attentionTarget.Properties.esFaction == "Players" then
+      local CT = System.GetEntitiesByClass("CounterTerrorist")
+      if #CT > 0 then
+        for i = 1, #CT do
+          CT[i].Properties.iHostageRescued = CT[i].Properties.iHostageRescued + 1
+          Log("From hostage incrementing rescued " .. tostring(CT[i].Properties.iHostageRescued))
+        end
+      end
+      self.Properties.bRescued = true
+      self.Properties.sRescuerName = attentionTarget:GetName()
+      AI.Signal(0, -1, "WalkWithPlayer", self.id)
+    end
+  end
+end
+
 function Hostage_x:GetRescuerPos()
   local RescuerPosition = System.GetEntityByName(self.Properties.sRescuerName):GetWorldPos()
   AI.SetRefPointPosition(self.id, RescuerPosition)

@@ -30,7 +30,8 @@
 			<State name="Idle">
 
 				<Transitions>
-					<Transition to="Move" onEvent="WalkWithMe"/>
+					<!-- <Transition to="Move" onEvent="WalkWithMe"/> -->
+          <Transition to="Move" OnEvent="WalkWithPlayer"/>
 				</Transitions>
 
 				<BehaviorTree>

@@ -26,7 +26,7 @@ function Medic_x:OnEnemySeen()
   AIBase.OnEnemySeen(self);
   Log(tostring("In Medic OnEnemySeen"))
   local attentionTarget = AI.GetAttentionTargetEntity(self.id);
-  if (attentionTarget.Properties.esFaction == "Friend" and attentionTarget.actor:GetHealth() < 500 and AI.GetAttentionTargetDistance(self.id) < 2.6) then
+  if ((attentionTarget.Properties.esFaction == "Friend" or attentionTarget.Properties.esFaction == "Players") and attentionTarget.actor:GetHealth() < 500 and AI.GetAttentionTargetDistance(self.id) < 2.6) then
     AI.Signal(SIGNALFILTER_SENDER, 1, "OnInjuredPlayerSeen", self.id);
   end
 end
@@ -34,7 +34,8 @@ end
 function Medic_x:HealPlayer()
   Log(tostring("Healing you buddy!"))
   local attentionTarget = AI.GetAttentionTargetEntity(self.id);
-  attentionTarget.actor:SetHealth(500);  
+  attentionTarget.actor:SetHealth(500);
+  AI.Signal(0, -1, "GoTo_GoToHostage", attentionTarget.id)
 end
 
 --mergef(Medic_x,Human_x_Medic,1)

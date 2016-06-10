@@ -27,12 +27,12 @@
                         <SetAlertness value="0"/>
                         <ExecuteLua code="entity.actor:HolsterItem(true)"/>
                         <Stance name="Alerted"/>
-						<Loop>
-							<Sequence>
-								<Animate name="AI_SearchLookAround"/>
-								<Wait duration="5"/>
-							</Sequence>
-						</Loop>
+            						<Loop>
+            							<Sequence>
+            								<Animate name="AI_SearchLookAround"/>
+            								<Wait duration="5"/>
+            							</Sequence>
+            						</Loop>
                         <!-- <Animate name="ZZ_AI_idleBreak"/> -->
                         <!-- <Halt/> -->
                     </Sequence>
@@ -53,17 +53,17 @@
                         <SetAlertness value="2"/>
                         <Stance name="Alerted"/>
                         <!-- main loop -->
-                        <Loop _startLog="main loop">
+                        <!-- <Loop _startLog="main loop"> -->
                             <Sequence>
                                 <!-- <Move to="Target" speed="Run" stance="Stand" avoidDangers="0" stopWithinDistance="2.5"/> -->
                                 <ExecuteLua code="entity:HealPlayer()" />
                                 <!-- keep helping or transition back to "Idle" -->
-                                <Selector>
-                                    <AssertCondition condition="HasTarget"/>
+                                <!-- <Selector> -->
+                                    <!-- <AssertCondition condition="HasTarget"/> -->
                                     <SendTransitionSignal name="GoTo_Idle"/>
-                                </Selector>
+                                <!-- </Selector> -->
                             </Sequence>
-                        </Loop>
+                        <!-- </Loop> -->
                     </Sequence>
                 </BehaviorTree>
             </State>

@@ -1,36 +1,64 @@
 <Definition root="Data">
-  
+
   <Array name="player_pos" elementName="Pos">
 	<!--<Property name="t" type="float" />-->
     <Property name="pos" type="Vec3" />
   </Array>
-  
-  
+
+
   <Array name="player_direction" elementName="Dir">
     <Property name="dir" type="Vec3" />
-  </Array> 
-  
-  
+  </Array>
+
+
   <Array name="player_vel" elementName="Vel">
 	<!--<Property name="v" type="float" />-->
-    <Property name="vel" type="Vec3" />
+    <Property name="vel" type="float" />
   </Array>
-  
-   
-  
+
+
+
   <Array name="player_health" elementName="Health">
 	<!--<Property name="t" type="float" />-->
     <Property name="h" type="int" />
   </Array>
-  
-  
-  
+
+
+
   <Array name="enemy_count" elementName="ActiveEnemyCount">
     <Property name="count" type="int" />
   </Array>
-  
+
   <Array name="nearest_enemy" elementName="NearestEnemy">
     <Property name="nearestEnemy" type="int" />
   </Array>
-  
+
+
+  <Array name="medic_count" elementName="ActiveMedicCount">
+    <Property name="medcount" type="int" />
+  </Array>
+
+  <Array name="nearest_medic" elementName="NearestMedic">
+    <Property name="nearestMedic" type="int" />
+	</Array>
+
+<Array name="hostage_toBeRescued" elementName="HostageToBeRescued">
+	<Property name="notRescued" type="int" />
+  </Array>
+
+  <Array name="nearest_hostage" elementName="NearestHostage">
+    <Property name="nearestHostage" type="int" />
+	</Array>
+
+  <Array name="weapon_name" elementName="WeaponName">
+    <Property name="weaponName" type="string" />
+  </Array>
+
+  <Array name="firemode_name" elementName="FireModeName">
+    <Property name="fireModeName" type="string" />
+  </Array>
+
+  <Array name="ammo_name" elementName="AmmoName">
+    <Property name="ammoName" type="string" />
+  </Array>
 </Definition>

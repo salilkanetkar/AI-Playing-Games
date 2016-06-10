@@ -18,12 +18,14 @@ CT_x = {
     vectorCurrentHosLoc = {},
 	  sCurrentEnemy = "",
     bGroupLeader = false,
+    sCurrentMedic = "",
     -- vectorTeammates = {},
     -- iEnemiesKilled = 0,
   },
   Group = {
     -- bGroupLeader = false,
     vectorTeammates = {},
+    vectorMedics = {},
     iEnemiesKilled = 0,
   },
   time_elapsed = 0.0,
@@ -33,6 +35,13 @@ CT_x = {
 	player_vel = {},
 	player_direction = {},
 	nearest_enemy = {},
+  hostage_toBeRescued = {},
+	medic_count = {},
+	nearest_medic = {},
+	nearest_hostage = {},
+  weapon_name = {},
+  firemode_name = {},
+  ammo_name = {},
   xml_def_path = "Scripts/Entities/AI/Characters/DataDef.xml",
   xml_data_path = "DataData.xml",
 }
@@ -114,6 +123,11 @@ function CT_x:InitHostageLoc()
   if (next(mEntities) ~= nil) then
     local mNum = table.getn(mEntities)
     self.Properties.iMedCount = mNum
+    if self.Properties.bGroupLeader == true then
+      for i = 1, mNum do
+        self.Group.vectorMedics[i] = mEntities[i]:GetName()
+      end
+    end
     for i = 1, mNum do
       mtmp = {
         MIndex=i,
@@ -152,6 +166,13 @@ end
 -- The group leader will lead and his teammates are supposed to follow him covering
 -- from two different angles
 function CT_x:FindNearestHostage()
+  Log(tostring(self.actor:GetHealth()))
+  if self.actor:GetHealth() < 300 then
+    if #self.Group.vectorMedics > 0 then
+      AI.Signal(0, -1, "OnFindingMedic", self.id)
+      return
+    end
+  end
   if (self.Properties.bGroupLeader == true) then
     Log(self:GetName() .. " I'm leader ")
     local Data = CryAction.LoadXML("Scripts/Entities/AI/Characters/LocationsDef.xml", "D:/Amazon/Lumberyard/dev/GameSDK/Scripts/Entities/AI/Characters/LocationsData.xml")
@@ -186,6 +207,7 @@ function CT_x:FindNearestHostage()
       self.Properties.iHostageRescued = self.Properties.iHostageCount
       AI.Signal(0, -1, "GoTo_Idle", self.id)
     else
+      AI.SetPathToFollow(self.id, "Path1")
       AI.SetRefPointPosition(self.id, vectorCurrentHosLoc)
       if shortestDist <= 15 then
         AI.Signal(0, -1, "GoTo_WalkToHostage", self.id)
@@ -210,7 +232,7 @@ function CT_x:CheckTeamFollowing()
     for i = 1, #self.Group.vectorTeammates do
       local ent = System.GetEntityByName(self.Group.vectorTeammates[i])
       if ent:GetName() ~= self:GetName() then
-        if DistanceVectors(self:GetWorldPos(), ent:GetWorldPos()) > 10 then
+        if DistanceVectors(self:GetWorldPos(), ent:GetWorldPos()) > 5 then
           numTeamFar = numTeamFar + 1
         end
       end
@@ -245,8 +267,12 @@ end
 function CT_x:ReleaseHostage()
   local currentEnt = System.GetEntityByName(sCurrentHostage)
   local entId = System.GetEntityIdByName(sCurrentHostage)
-  currentEnt.Properties.bRescued = true
-  self.Properties.iHostageRescued = self.Properties.iHostageRescued + 1
+  -- currentEnt.Properties.bRescued = true
+  -- self.Properties.iHostageRescued = self.Properties.iHostageRescued + 1
+  for i = 1, #self.Group.vectorTeammates do
+    local ent = System.GetEntityByName(self.Group.vectorTeammates)
+    ent.Properties.iHostageRescued = ent.Properties.iHostageRescued + 1
+  end
   currentEnt.Properties.sRescuerName = self:GetName()
   AI.Signal(0, -1, "WalkWithMe", entId)
 end
@@ -263,13 +289,13 @@ function CT_x:OnEnemySeen()
   	Log(tostring(attentionTarget.Properties.esFaction))
   	Log(tostring("Should Kill"))
   	AI.Signal(SIGNALFILTER_SENDER, 1, "OnHostileSeen", self.id)
-  end
-  for i = 1, #self.Group.vectorTeammates do
-    if self.Group.vectorTeammates[i] ~= self:GetName() then
-      local ent = System.GetEntityIdByName(self.Group.vectorTeammates[i])
-      System.GetEntityByName(self.Group.vectorTeammates[i]).Properties.sCurrentEnemy = attentionTarget:GetName()
-      AI.SetAttentiontarget(ent, System.GetEntityIdByName(AI.GetAttentionTargetOf(self.id)))
-      AI.Signal(0, -1, "OnHostileSeen", ent)
+    for i = 1, #self.Group.vectorTeammates do
+      if self.Group.vectorTeammates[i] ~= self:GetName() then
+        local ent = System.GetEntityIdByName(self.Group.vectorTeammates[i])
+        System.GetEntityByName(self.Group.vectorTeammates[i]).Properties.sCurrentEnemy = attentionTarget:GetName()
+        AI.SetAttentiontarget(ent, System.GetEntityIdByName(AI.GetAttentionTargetOf(self.id)))
+        AI.Signal(0, -1, "OnHostileSeen", ent)
+      end
     end
   end
 end
@@ -310,16 +336,54 @@ function CT_x:CheckToNade()
   end
 end
 
+function CT_x:FindNearestMedic()
+  local nearestMedic = 0
+  local medicDist = 0
+  local distTab = {}
+  if #self.Group.vectorMedics > 0 then
+    for i = 1, #self.Group.vectorMedics do
+      local ent = System.GetEntityByName(self.Group.vectorMedics[i])
+      distTab[i] = DistanceVectors(self:GetWorldPos(), ent:GetWorldPos())
+    end
+    for i = 1, #distTab do
+      if nearestMedic == 0 then
+        nearestMedic = i
+      else
+        if distTab[i] < distTab[nearestMedic] then
+          nearestMedic = i
+        end
+      end
+    end
+    local medicFound = System.GetEntityByName(self.Group.vectorMedics[nearestMedic])
+    self.Properties.sCurrentMedic = medicFound:GetName()
+    Log(self.Properties.sCurrentMedic)
+    AI.SetRefPointPosition(self.id, medicFound:GetWorldPos())
+  end
+end
 
 function CT_x:FindIfEnemyDead()
   local enemyTarget = AI.GetAttentionTargetEntity(self.id)
   if enemyTarget ~= nil then
-    if enemyTarget:IsDead() == true then
+    if enemyTarget.Properties.esFaction == "Players" then
       AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
+    else
+      if enemyTarget:IsDead() == true then
+        AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
+      end
     end
   else
     AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
   end
+end
+
+function CT_x:CheckWithMedic()
+  -- Log("regular check " .. self.actor:GetHealth())
+  local med = System.GetEntityByName(self.Properties.sCurrentMedic)
+  AI.SetAttentiontarget(med.id, self.id)
+  AI.Signal(0, -1, "OnInjuredPlayerSeen", med.id)
+  -- if self.actor:GetHealth() == 500 then
+  --   AI.Signal(0, -1, "GoTo_GoToHostage", self.id)
+  -- end
 end
 
 function CT_x:GetHostageLocation()
@@ -424,50 +488,137 @@ function CT_x:On_Position(sender, params)
   if currentWeapon ~= nil then
     Log("Current weapon is " .. currentWeapon.class)
   end
+  --position
   self.player_pos[#self.player_pos+1] = {pos = params };
   -- Log(tostring(self:GetVelocity()))
-  self.player_vel[#self.player_vel+1] = {vel =self:GetVelocity() }
+    --velocity
+--  self.player_vel[#self.player_vel+1] = {vel =self:GetVelocity() }
+--hostages yet to be rescued
+  self.hostage_toBeRescued[#self.hostage_toBeRescued + 1] = {notRescued = self.Properties.iHostageCount - self.Properties.iHostageRescued};
+
   local enemiesList = System.GetEntitiesByClass("Human")
   local enemyNearCount = 0
   local mindist = 70
-    -- Log("Checking Enemy Distance and Count")
+  --   -- Log("Checking Enemy Distance and Count")
+  --   if #enemiesList > 0 then
+  --     for i = 1, #enemiesList do
+  --   --  local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
+	-- 	local dist = DistanceVectors(params, enemiesList[i]:GetWorldPos())
+	-- 	if dist < mindist then
+	-- 		mindist = dist
+	-- 	end
+  --       if dist <= 70 then
+	-- 		if not(enemiesList[i]:IsDead()) then
+	-- 			enemyNearCount = enemyNearCount + 1
+	-- 			self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+	-- 		else
+	-- 			enemyNearCount = enemyNearCount - 1
+	-- 			self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+	-- 		end
+	-- 	  -- Log(tostring("Enemy count is below"))
+	-- 	  -- Log(tostring(enemyNearCount))
+	-- 	  end
+  --     end
+	-- --self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+	-- self.nearest_enemy[#self.nearest_enemy+1] = { nearestEnemy = mindist };
+  -- --saving enemy count
+	-- --local e_table = System.GetEntitiesByClass("Human")
+	-- --Log(tostring(e_table))
+	-- --local e_count = tablelength(e_table)
+	-- --Log(tostring(e_count))
+	-- end
+  Log("Checking Enemy Distance and Count")
     if #enemiesList > 0 then
       for i = 1, #enemiesList do
-    --  local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
-		local dist = DistanceVectors(params, enemiesList[i]:GetWorldPos())
-		if dist < mindist then
-			mindist = dist
-		end
+        --local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
+    		local dist = DistanceVectors(params, enemiesList[i]:GetWorldPos())
+    		if dist < mindist then
+    			mindist = dist
+    		end
         if dist <= 70 then
-			if not(enemiesList[i]:IsDead()) then
-				enemyNearCount = enemyNearCount + 1
-				self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
-			else
-				enemyNearCount = enemyNearCount - 1
-				self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
-			end
-		  -- Log(tostring("Enemy count is below"))
-		  -- Log(tostring(enemyNearCount))
-		  end
+    			if not(enemiesList[i]:IsDead()) then
+    				enemyNearCount = enemyNearCount + 1
+    				--self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+    			else
+    				--enemyNearCount = enemyNearCount - 1
+    				enemyNearCount = enemyNearCount
+    				--self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+			    end
+    		  Log(tostring("Enemy count is below"))
+    		  Log(tostring(enemyNearCount))
+		    end
       end
-	--self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
-	self.nearest_enemy[#self.nearest_enemy+1] = { nearestEnemy = mindist };
+      self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+    	--self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+    	self.nearest_enemy[#self.nearest_enemy+1] = { nearestEnemy = mindist };
+      --saving enemy count
+    	--local e_table = System.GetEntitiesByClass("Human")
+    	--Log(tostring(e_table))
+    	--local e_count = tablelength(e_table)
+    	--Log(tostring(e_count))
+    end
+
+
+  local medicList = System.GetEntitiesByClass("Medic")
+  local medmindist = 70
+  local mindist = 70
+  local medicNearCount = 0
+
+  if #medicList > 0 then
+      for i = 1, #medicList do
+    --local meddist = DistanceVectors(self:GetWorldPos(), medicList[i]:GetWorldPos())
+    local meddist = DistanceVectors(params, medicList[i]:GetWorldPos())
+    if meddist < medmindist then
+      medmindist = meddist
+    end
+        if meddist <= 70 then
+
+
+        medicNearCount = medicNearCount + 1
+
+    end
+      -- Log(tostring("Enemy count is below"))
+      -- Log(tostring(enemyNearCount))
+
+      end
+      self.medic_count[#self.medic_count+1] = { medcount = medicNearCount };
+  --self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
+  self.nearest_medic[#self.nearest_medic+1] = { nearestMedic = medmindist };
   --saving enemy count
-	--local e_table = System.GetEntitiesByClass("Human")
-	--Log(tostring(e_table))
-	--local e_count = tablelength(e_table)
-	--Log(tostring(e_count))
-	end
+  --local e_table = System.GetEntitiesByClass("Human")
+  --Log(tostring(e_table))
+  --local e_count = tablelength(e_table)
+  --Log(tostring(e_count))
+  end
+
+--------
+local hostageList = System.GetEntitiesByClass("Hostage")
+local hosmindist = 70
+Log("Checking Nearest hostage distance")
+  if #hostageList > 0 then
+    for i = 1, #hostageList do
+      --local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
+      if (hostageList[i].Properties.bRescued == false) then
+      local hosdist = DistanceVectors(params, hostageList[i]:GetWorldPos())
+    if hosdist < hosmindist then
+    hosmindist = hosdist
+      end
+  end
+
+   end
+   self.nearest_hostage[#self.nearest_hostage+1] = { nearestHostage = hosmindist };
+    end
+
 end
 
---function CT_x:On_Velocity(sender, params)
-	--Log(tostring(params));
+function CT_x:On_Velocity(sender, params)
+	Log(tostring(params));
 
 	--saving positions
-  --self.player_vel[#self.player_vel+1] = {vel = params };
+  self.player_vel[#self.player_vel+1] = {vel = params };
 
 
---end
+end
 
 function CT_x:On_Direction(sender, params)
 	--Log(tostring(params));
@@ -481,8 +632,31 @@ end
 function CT_x:On_Health(sender, params)
   --Log(tostring(params));
   local CtHealth = self.actor:GetHealth()
+  Log(tostring(params) .. " is the player health")
+  -- Log("Dude's health is " .. tostring(CTHealth))
+  -- Log(tostring(player:GetHealth()))
   -- Log(tostring(CtHealth))
-  self.player_health[#self.player_health+1] = { h = CtHealth };
+  self.player_health[#self.player_health+1] = { h = params };
+end
+
+function CT_x:On_Weapon(sender, params)
+  --Log(tostring(params));
+  --local CtHealth = self.actor:GetHealth()
+  Log(tostring(params) .. " is the player weapon")
+  -- Log("Dude's health is " .. tostring(CTHealth))
+  -- Log(tostring(player:GetHealth()))
+  -- Log(tostring(CtHealth))
+  self.weapon_name[#self.weapon_name+1] = { weaponName = params };
+end
+
+function CT_x:On_Firemode(sender, params)
+  Log(tostring(params) .. " is the player fire mode")
+  self.firemode_name[#self.firemode_name+1] = {fireModeName = params };
+end
+
+function CT_x:On_Ammo(sender, params)
+  Log(tostring(params) .. " is the player ammo")
+  self.ammo_name[#self.ammo_name+1] = {ammoName = params };
 end
 
 function tablelength(T)
@@ -528,7 +702,10 @@ CounterTerrorist.FlowEvents = {
 	  Health = {CT_x.On_Health, "int"},
 	  Direction = {CT_x.On_Direction, "Vec3"},
     Dead = {CT_x.On_Dead, "int"},
---	Velocity = {CT_x.On_Velocity, "Vec3"}
+	Velocity = {CT_x.On_Velocity, "float"},
+  Weapon = {CT_x.On_Weapon, "string"},
+  Firemode = {CT_x.On_Firemode,"string"},
+  Ammo = {CT_x.On_Ammo,"string"}
 	--Direction = {CT_x.On_Direction, "Vec3"},
 	--ActiveEnemyCount = {CT_x.On_ActiveEnemyCount,"int"}
   },

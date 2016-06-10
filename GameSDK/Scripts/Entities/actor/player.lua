@@ -14,7 +14,7 @@
 ----------------------------------------------------------------------------------------------------
 Script.ReloadScript( "SCRIPTS/Entities/actor/BasicActor.lua");
 
-Player = 
+Player =
 {
 	AnimationGraph = "player.xml",
 	UpperBodyGraph = "",
@@ -67,7 +67,7 @@ Player =
 		fileHitDeathReactionsParamsDataFile = "Libs/HitDeathReactionsData/HitDeathReactions_PlayerSP.xml",
 	},
 
-	PropertiesInstance = 
+	PropertiesInstance =
 	{
 		aibehavior_behaviour = "PlayerIdle",
 	},
@@ -226,18 +226,18 @@ function Player:Expose()
 	Net.Expose
 	{
 		Class = self,
-		ClientMethods = 
+		ClientMethods =
 		{
 			Revive			= { RELIABLE_ORDERED, POST_ATTACH },
 			MoveTo			= { RELIABLE_ORDERED, POST_ATTACH, VEC3 },
 			AlignTo			= { RELIABLE_ORDERED, POST_ATTACH, VEC3 },
 			ClearInventory	= { RELIABLE_ORDERED, POST_ATTACH },
 		},
-		ServerMethods = 
+		ServerMethods =
 		{
 			--UseEntity = { RELIABLE_ORDERED, POST_ATTACH, ENTITYID, INT16, BOOL},
 		},
-		ServerProperties = 
+		ServerProperties =
 		{
 		}
 	};
