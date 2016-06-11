@@ -44,6 +44,7 @@ CT_x = {
   ammo_name = {},
   xml_def_path = "Scripts/Entities/AI/Characters/DataDef.xml",
   xml_data_path = "DataData.xml",
+  collected_data = {},
 }
 
 function CT_x:OnInit()
@@ -202,12 +203,22 @@ function CT_x:FindNearestHostage()
           end
         end
       end
+      AI.SetPathToFollow(self.id, "Path1")
+      AI.SetRefPointPosition(self.id, vectorCurrentHosLoc)
+	  	local vel_map =
+  		{
+  			[1]="Walk",
+  			[2]="Run"
+  		}
+    	y_out = ann:predict_velocity(self.collected_data[1]);
+    	key, value = self:max1(y_out, function(a,b) return a < b end)
+    	Log(tostring(vel_map[key]))
     end
     if next(DistTable) == nil then
       self.Properties.iHostageRescued = self.Properties.iHostageCount
       AI.Signal(0, -1, "GoTo_Idle", self.id)
     else
-      AI.SetPathToFollow(self.id, "Path1")
+      -- AI.SetPathToFollow(self.id, "Path1")
       AI.SetRefPointPosition(self.id, vectorCurrentHosLoc)
       if shortestDist <= 15 then
         AI.Signal(0, -1, "GoTo_WalkToHostage", self.id)
@@ -267,10 +278,11 @@ end
 function CT_x:ReleaseHostage()
   local currentEnt = System.GetEntityByName(sCurrentHostage)
   local entId = System.GetEntityIdByName(sCurrentHostage)
-  -- currentEnt.Properties.bRescued = true
+  Log(currentEnt:GetName())
+  currentEnt.Properties.bRescued = true
   -- self.Properties.iHostageRescued = self.Properties.iHostageRescued + 1
   for i = 1, #self.Group.vectorTeammates do
-    local ent = System.GetEntityByName(self.Group.vectorTeammates)
+    local ent = System.GetEntityByName(self.Group.vectorTeammates[i])
     ent.Properties.iHostageRescued = ent.Properties.iHostageRescued + 1
   end
   currentEnt.Properties.sRescuerName = self:GetName()
@@ -458,6 +470,27 @@ function CT_x:CheckAIHealth()
 	end
 end
 
+function CT_x:CollectDataWeapon()
+	local weapon_map =
+	{
+		[1]="Rifle",
+		[2]="Shotgun",
+		[3]="Pistol",
+		[4]="FragGrenades"
+	}
+	--for k,v in ipairs(self.collected_data) do Log(tostring(v)) end
+	--Log((CT_x:print_r(self.collected_data)))
+	--Log(tostring("Hello"))
+	Log(tostring(self.collected_data[1][2]))
+	--Log(tostring(dump(self.collected_data)))
+	Script.ReloadScript( "SCRIPTS/Entities/AI/Characters/neural_network.lua")
+	y_out = ann:predict_weapon(self.collected_data[1]);
+	key, value = self:max1(y_out, function(a,b) return a < b end)
+	Log(tostring(weapon_map[key]))
+	--Log(tostring(value))
+	self.actor:SelectItemByName(weapon_map[key]);
+end
+
 --mergef(CT_x,Human_x_CounterTerrorist,1)
 mergef(CT_x,Human_x,1)
 CreateActor(CT_x)
@@ -481,12 +514,11 @@ CounterTerrorist:Expose()
 
 
 function CT_x:On_Position(sender, params)
-	--Log(tostring(params));
 
 	--saving positions
   local currentWeapon = self.inventory:GetCurrentItem()
   if currentWeapon ~= nil then
-    Log("Current weapon is " .. currentWeapon.class)
+    --Log("Current weapon is " .. currentWeapon.class)
   end
   --position
   self.player_pos[#self.player_pos+1] = {pos = params };
@@ -527,7 +559,7 @@ function CT_x:On_Position(sender, params)
 	-- --local e_count = tablelength(e_table)
 	-- --Log(tostring(e_count))
 	-- end
-  Log("Checking Enemy Distance and Count")
+--  Log("Checking Enemy Distance and Count")
     if #enemiesList > 0 then
       for i = 1, #enemiesList do
         --local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
@@ -544,8 +576,8 @@ function CT_x:On_Position(sender, params)
     				enemyNearCount = enemyNearCount
     				--self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
 			    end
-    		  Log(tostring("Enemy count is below"))
-    		  Log(tostring(enemyNearCount))
+    		  --Log(tostring("Enemy count is below"))
+    		  --Log(tostring(enemyNearCount))
 		    end
       end
       self.enemy_count[#self.enemy_count+1] = { count = enemyNearCount };
@@ -594,7 +626,7 @@ function CT_x:On_Position(sender, params)
 --------
 local hostageList = System.GetEntitiesByClass("Hostage")
 local hosmindist = 70
-Log("Checking Nearest hostage distance")
+--Log("Checking Nearest hostage distance")
   if #hostageList > 0 then
     for i = 1, #hostageList do
       --local dist = DistanceVectors(self:GetWorldPos(), enemiesList[i]:GetWorldPos())
@@ -612,7 +644,7 @@ Log("Checking Nearest hostage distance")
 end
 
 function CT_x:On_Velocity(sender, params)
-	Log(tostring(params));
+	--Log(tostring(params));
 
 	--saving positions
   self.player_vel[#self.player_vel+1] = {vel = params };
@@ -632,7 +664,7 @@ end
 function CT_x:On_Health(sender, params)
   --Log(tostring(params));
   local CtHealth = self.actor:GetHealth()
-  Log(tostring(params) .. " is the player health")
+  --Log(tostring(params) .. " is the player health")
   -- Log("Dude's health is " .. tostring(CTHealth))
   -- Log(tostring(player:GetHealth()))
   -- Log(tostring(CtHealth))
@@ -642,7 +674,7 @@ end
 function CT_x:On_Weapon(sender, params)
   --Log(tostring(params));
   --local CtHealth = self.actor:GetHealth()
-  Log(tostring(params) .. " is the player weapon")
+  --Log(tostring(params) .. " is the player weapon")
   -- Log("Dude's health is " .. tostring(CTHealth))
   -- Log(tostring(player:GetHealth()))
   -- Log(tostring(CtHealth))
@@ -650,12 +682,12 @@ function CT_x:On_Weapon(sender, params)
 end
 
 function CT_x:On_Firemode(sender, params)
-  Log(tostring(params) .. " is the player fire mode")
+  --Log(tostring(params) .. " is the player fire mode")
   self.firemode_name[#self.firemode_name+1] = {fireModeName = params };
 end
 
 function CT_x:On_Ammo(sender, params)
-  Log(tostring(params) .. " is the player ammo")
+  --Log(tostring(params) .. " is the player ammo")
   self.ammo_name[#self.ammo_name+1] = {ammoName = params };
 end
 

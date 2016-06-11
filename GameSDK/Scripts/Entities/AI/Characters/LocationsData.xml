@@ -1,14 +1,14 @@
 <Data>
  <LocationTable>
   <HostagesLoc>
-   <HosLocation HIndex="1" HName="Hostage3" HLoc="159.88806,172.61887,32.452618"/>
-   <HosLocation HIndex="2" HName="Hostage2" HLoc="220.1132,145.77634,32.208447"/>
-   <HosLocation HIndex="3" HName="Hostage1" HLoc="160.71837,101.45218,32.208447"/>
+   <HosLocation HIndex="1" HName="Hostage2" HLoc="220.31119,145.82602,32.208447"/>
+   <HosLocation HIndex="2" HName="Hostage1" HLoc="160.71837,101.45218,32.208447"/>
+   <HosLocation HIndex="3" HName="Hostage3" HLoc="159.84824,173.18947,32.452618"/>
   </HostagesLoc>
   <MedicLoc>
-   <MedLocation MIndex="1" MName="Medic2" MLoc="49.885681,43.606861,32.208447"/>
-   <MedLocation MIndex="2" MName="Medic3" MLoc="197.24489,140.85266,32.208447"/>
-   <MedLocation MIndex="3" MName="Medic1" MLoc="181.6312,94.832527,32.208447"/>
+   <MedLocation MIndex="1" MName="Medic1" MLoc="181.6312,94.832527,32.208447"/>
+   <MedLocation MIndex="2" MName="Medic2" MLoc="49.885681,43.606861,32.208447"/>
+   <MedLocation MIndex="3" MName="Medic3" MLoc="197.24489,140.85266,32.208447"/>
   </MedicLoc>
  </LocationTable>
 </Data>

@@ -54,9 +54,9 @@
               <AssertLua code="return entity:InitHostageLoc()"/>
             </Selector>
 
-            <!-- <Wait duration="0.1" variation="0.1"/> -->
-            <!-- <ExecuteLua code="entity:CheckHostageRescued()"/>
-            <SendTransitionSignal name="GoTo_GoToHostage"/> -->
+            <Wait duration="0.1" variation="0.1"/>
+            <ExecuteLua code="entity:CheckHostageRescued()"/>
+            <SendTransitionSignal name="GoTo_GoToHostage"/>
 
             <SetAlertness value="0"/>
             <ExecuteLua code="entity.actor:HolsterItem(true)"/>
@@ -150,7 +150,7 @@
           <Loop>
             <Sequence>
               <ExecuteLua code="entity:FindFormationPos()"/>
-              <Move to="RefPoint" speed="Walk" stance="Stand" avoidDangers="1" stopWithinDistance="5"/>
+              <Move to="RefPoint" speed="Run" stance="Stand" avoidDangers="1" stopWithinDistance="5"/>
             </Sequence>
           </Loop>
         </BehaviorTree>

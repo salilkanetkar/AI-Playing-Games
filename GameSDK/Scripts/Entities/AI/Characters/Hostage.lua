@@ -27,38 +27,51 @@ Hostage_x = {
 
 -- function Hostage_x:OnEnemySeen()
 --   AIBase.OnEnemySeen(self);
+--   Log("Hostage seeing enemy")
 --
 --   local attentionTarget = AI.GetAttentionTargetEntity(self.id);
 --
 --   if (attentionTarget.Properties.esFaction == "Players" or attentionTarget.Properties.esFaction == "Friend") then
 --     if (bRescued == true) then
---       AI.SetRefPointPosition(self.id, vectorAIPoint)
---       AI.Signal(SIGNALFILTER_SENDER, 1, "OnMoveToRescuer", self.id)
+--       AI.SetRefPointPosition(self.id, attentionTarget:GetWorldPos())
+--       AI.Signal(SIGNALFILTER_SENDER, 1, "WalkWithMe", self.id)
 --     end
 --   end
 -- end
 
-function Hostage_x:OnEnemySeen()
-  if self.Properties.bRescued == false then
-    local attentionTarget = AI.GetAttentionTargetEntity(self.id)
-    if attentionTarget.Properties.esFaction == "Players" then
-      local CT = System.GetEntitiesByClass("CounterTerrorist")
-      if #CT > 0 then
-        for i = 1, #CT do
-          CT[i].Properties.iHostageRescued = CT[i].Properties.iHostageRescued + 1
-          Log("From hostage incrementing rescued " .. tostring(CT[i].Properties.iHostageRescued))
-        end
-      end
-      self.Properties.bRescued = true
-      self.Properties.sRescuerName = attentionTarget:GetName()
-      AI.Signal(0, -1, "WalkWithPlayer", self.id)
-    end
-  end
-end
+-- function Hostage_x:OnEnemySeen()
+--   if self.Properties.bRescued == false then
+--     local attentionTarget = AI.GetAttentionTargetEntity(self.id)
+--     if attentionTarget.Properties.esFaction == "Players" then
+--       local CT = System.GetEntitiesByClass("CounterTerrorist")
+--       if #CT > 0 then
+--         for i = 1, #CT do
+--           CT[i].Properties.iHostageRescued = CT[i].Properties.iHostageRescued + 1
+--           Log("From hostage incrementing rescued " .. tostring(CT[i].Properties.iHostageRescued))
+--         end
+--         self.Properties.bRescued = true
+--         self.Properties.sRescuerName = attentionTarget:GetName()
+--         AI.Signal(0, -1, "WalkWithPlayer", self.id)
+--       end
+--     end
+--   end
+-- end
 
 function Hostage_x:GetRescuerPos()
-  local RescuerPosition = System.GetEntityByName(self.Properties.sRescuerName):GetWorldPos()
-  AI.SetRefPointPosition(self.id, RescuerPosition)
+  -- Log("Getting the position of leader")
+  local CTs = System.GetEntitiesByClass("CounterTerrorist")
+  if #CTs > 0 then
+    for i = 1, #CTs do
+      if CTs[i].Properties.bGroupLeader == true then
+        -- Log(tostring(CTs[i]:GetName()))
+        AI.SetRefPointPosition(self.id, CTs[i]:GetWorldPos())
+      end
+    end
+    -- local RescuerPosition = System.GetEntityByName(self.Properties.sRescuerName):GetWorldPos()
+    -- AI.SetRefPointPosition(self.id, RescuerPosition)
+  else
+    AI.Signal(0, -1, "GoTo_Idle", self.id)
+  end
 end
 
 mergef(Hostage_x,Human_x,1)
